@@ -16,10 +16,10 @@
 
 :where(.css-dev-only-do-not-override-apn68).ant-menu-light, :where(.css-dev-only-do-not-override-apn68).ant-menu-light>.ant-menu {
   color: rgba(0, 0, 0, 0.88);
-  background: #0f0fa3 !important;
+  background: #004c98 !important;
 }
 .custom-sidebar {
-  background-color: #0f0fa3 !important;
+  background-color: #004c98 !important;
 }
 
 .custom-sidebar .ant-menu-item {
