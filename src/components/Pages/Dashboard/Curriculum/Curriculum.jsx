@@ -238,7 +238,7 @@ export default function Curriculum() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-    }, 2000);
+    }, 500);
   }, []);
 
   return (
@@ -263,7 +263,10 @@ export default function Curriculum() {
               </Col>
             </Row>
 
-            <Row gutter={16} style={{ marginBottom: 20 }}>
+            <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
+              <Col>
+              <span style={{ marginRight: 8 }}><strong>Filter by: </strong></span>
+              </Col>
               <Col xs={24} sm={12} md={8}>
                 <Select
                   defaultValue="all"
@@ -275,7 +278,7 @@ export default function Curriculum() {
                   <Option value="BSIS">BSIS</Option>
                 </Select>
               </Col>
-              <Col xs={24} sm={12} md={8}>
+              <Col xs={24} sm={12} md={3}>
                 <Select
                   defaultValue="all"
                   style={{ width: '100%' }}
@@ -416,7 +419,7 @@ export default function Curriculum() {
                  </Col>
                  <Col>
                  <Button type="primary" block onClick={handleSaveChanges}>
-                     {isEditMode ? "Save Changes" : "Add Curriculum"}
+                     {isEditMode ? "Save Changes" : "Add"}
                  </Button>
                  </Col>
             </Row>
@@ -424,14 +427,14 @@ export default function Curriculum() {
       </Modal>
 
       <Modal
-        title="Delete Course"
+        title="Delete Curriculum"
         open={isDeleteModalVisible}
         onCancel={handleDeleteCancel}
         onOk={handleDeleteConfirm}
         okText="Delete"
         cancelText="Cancel"
       >
-        <p>Are you sure you want to delete this course?</p>
+        <p>Are you sure you want to delete this curriclum?</p>
       </Modal>
     </Layout>
 );
