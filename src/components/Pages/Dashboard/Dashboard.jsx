@@ -7,74 +7,91 @@ import Curriculum from "../../../assets/Images/curriculum-image.webp";
 import CourseSyllabus from "../../../assets/Images/course-syllabus-image.jpg";
 import Reports from "../../../assets/Images/reports-image.jpg";
 import "./Dashboard.css"; // Import the CSS file
+import { useNavigate } from "react-router-dom";
 
 const { Content } = Layout;
 
-const Dashboard = () => (
-  <Layout style={{ minHeight: "100vh" }}>
-    <Sidebar />
-    <Layout>
-      <Content>
-        <div className="dashboard-content">
-          <h2 className="dashboard-header">Welcome to the Dashboard!</h2>
-          
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card bordered={false}>
-                <img 
-                  src={OBE} 
-                  alt="OBE Image" 
-                  className="card-image" 
-                />
-                <div className="card-title">
-                  <strong>OBE Data Configuration</strong>
+export default function Dashboard() {
+  const navigate = useNavigate();
+  return (
+    <Layout style={{ minHeight: "100vh" }}>
+      <Sidebar />
+      <Layout>
+        <Content>
+          <div className="dashboard-content">
+            <h2 className="dashboard-header">WELCOME TO DASHBOARD</h2>
+            
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <div className="dashboard-menu-card">
+                  <Card 
+                    bordered={false}
+                  >
+                    <img 
+                      src={OBE} 
+                      alt="OBE Image" 
+                      className="card-image" 
+                    />
+                    <div className="card-title">
+                      <strong>OBE Data Configuration</strong>
+                    </div>
+                  </Card>
                 </div>
-              </Card>
-            </Col>
-
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card bordered={false}>
-                <img 
-                  src={Curriculum} 
-                  alt="Curriculum Image" 
-                  className="card-image" 
-                />
-                <div className="card-title">
-                  <strong>Curriculum</strong>
+              </Col>
+  
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <div className="dashboard-menu-card">
+                  <Card 
+                    bordered={false}
+                    onClick={() => navigate('/curriculum')}
+                  >
+                    <img 
+                      src={Curriculum} 
+                      alt="Curriculum Image" 
+                      className="card-image" 
+                    />
+                    <div className="card-title">
+                      <strong>Curriculum</strong>
+                    </div>
+                  </Card>
                 </div>
-              </Card>
-            </Col>
-
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card bordered={false}>
-                <img 
-                  src={CourseSyllabus} 
-                  alt="Course Syllabus" 
-                  className="card-image" 
-                />
-                <div className="card-title">
-                  <strong>Course Syllabus</strong>
+              </Col>
+  
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <div className="dashboard-menu-card">
+                  <Card bordered={false}>
+                    <img 
+                      src={CourseSyllabus} 
+                      alt="Course Syllabus" 
+                      className="card-image" 
+                    />
+                    <div className="card-title">
+                      <strong>Course Syllabus</strong>
+                    </div>
+                  </Card>
                 </div>
-              </Card>
-            </Col>
-
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card bordered={false}>
-                <img 
-                  src={Reports} 
-                  alt="Reports Image" 
-                  className="card-image" 
-                />
-                <div className="card-title">
-                  <strong>Outcomes Attainable Report</strong>
+              </Col>
+  
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <div className="dashboard-menu-card">
+                  <Card bordered={false}>
+                    <img 
+                      src={Reports} 
+                      alt="Reports Image" 
+                      className="card-image" 
+                    />
+                    <div className="card-title">
+                      <strong>Outcomes Attainable Report</strong>
+                    </div>
+                  </Card>
                 </div>
-              </Card>
-            </Col>
-          </Row>
-        </div>
-      </Content>
+              </Col>
+            </Row>
+          </div>
+        </Content>
+      </Layout>
     </Layout>
-  </Layout>
-);
+  );
+}
 
-export default Dashboard;
+
