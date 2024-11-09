@@ -1,0 +1,9 @@
+.main-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: url("/uc-login ver2-background.jpg") no-repeat center center fixed;
+    background-size: cover;
+  }
+  

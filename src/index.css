@@ -2,11 +2,8 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background: url("public/uc-login ver2-background.jpg") no-repeat center center
-    fixed;
   background-size: cover;
   margin: 0;
   padding: 0;
@@ -15,4 +12,32 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+:where(.css-dev-only-do-not-override-apn68).ant-menu-light, :where(.css-dev-only-do-not-override-apn68).ant-menu-light>.ant-menu {
+  color: rgba(0, 0, 0, 0.88);
+  background: #0f0fa3 !important;
+}
+.custom-sidebar {
+  background-color: #0f0fa3 !important;
+}
+
+.custom-sidebar .ant-menu-item {
+  color: white !important;
+}
+
+.custom-sidebar .ant-menu-item:hover {
+  background-color: #40a9ff !important; 
+}
+
+.custom-sidebar .ant-menu-item-selected {
+  background-color: #096dd9 !important; 
+}
+
+.custom-sidebar .ant-menu-item a {
+  color: white !important; 
+}
+
+.custom-sidebar .ant-menu-item a:hover {
+  color: #fff !important; 
 }

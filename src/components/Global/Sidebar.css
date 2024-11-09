@@ -1,0 +1,30 @@
+/* Sidebar logo container */
+.sidebar-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    margin-bottom: 16px;
+    background-color: #0f0fa3;
+    cursor: pointer;
+  }
+  
+  /* Logo styles for expanded and collapsed states */
+  .logo {
+    border-radius: 50%;
+    object-fit: cover;
+    transition: width 0.3s ease, height 0.3s ease;
+  }
+  
+  /* Expanded logo */
+  .expanded-logo {
+    width: 120px;
+    height: 120px;
+  }
+  
+  /* Collapsed logo */
+  .collapsed-logo {
+    width: 40px;
+    height: 40px;
+  }
+  

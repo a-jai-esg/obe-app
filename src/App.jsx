@@ -1,8 +1,9 @@
+/* eslint-disable no-unused-vars */
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Login from "./components/Login";
-import Registration from "./components/Registration";
-import Dashboard from "./components/Pages/Dashboard";
+import Login from "./components/Pages/Login/Login";
+import Registration from "./components/Pages/Registration/Registration";
+import Dashboard from "./components/Pages/Dashboard/Dashboard";
 import "./index.css";
 
 const App = () => (
