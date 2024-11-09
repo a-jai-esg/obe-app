@@ -64,6 +64,7 @@ export default function Dashboard() {
                       src={CourseSyllabus} 
                       alt="Course Syllabus" 
                       className="card-image" 
+                      onClick={() => navigate('/course-syllabus')}
                     />
                     <div className="card-title">
                       <strong>Course Syllabus</strong>
