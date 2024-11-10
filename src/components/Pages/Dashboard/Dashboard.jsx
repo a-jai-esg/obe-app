@@ -31,6 +31,7 @@ export default function Dashboard() {
                       src={OBE} 
                       alt="OBE Image" 
                       className="card-image" 
+                      onClick={() => navigate('/obe-data-configuration')}
                     />
                     <div className="card-title">
                       <strong>OBE Data Configuration</strong>
