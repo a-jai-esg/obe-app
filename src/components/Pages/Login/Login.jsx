@@ -1,7 +1,7 @@
 // components/Pages/Login/Login.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Form, Input, Button, Card } from "antd";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios"; // Import axios
 import { setToken } from "../../utils/auth"; // A utility function to store token in localStorage
 import logo from "/uc-logo.png";
@@ -35,20 +35,24 @@ const Login = () => {
     }
   };
 
+  useEffect(() => {
+    document.title = "Login - OBE Application";
+  }, []);
+
   return (
     <div className="main-container">
       <Card
         title={
           <div style={{ textAlign: "center" }}>
             <img
-              src={logo}
+              src={logo} // Set the logo source here
               alt="OBE Application Logo"
               style={{
                 marginTop: "5%",
-                maxWidth: "100%",
-                height: "auto",
-                width: "150px",
-                marginBottom: "20px",
+                maxWidth: "100%", // Ensure the logo is responsive
+                height: "auto", // Maintain aspect ratio
+                width: "150px", // Set a default width for large screens
+                marginBottom: "20px", // Add spacing below the logo
               }}
             />
             <h2 style={{ fontWeight: "600", fontSize: "24px" }}>User Login</h2>
@@ -58,15 +62,16 @@ const Login = () => {
           </div>
         }
         style={{
-          width: 450,
+          width: 450, // Increased width for a more spacious look
           margin: "auto",
           marginTop: "50px",
-          borderRadius: "10px",
-          boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
+          borderRadius: "10px", // Rounded corners
+          boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)", // Subtle shadow for depth
           padding: "20px",
         }}
       >
         <Form name="login" onFinish={onFinish} layout="vertical">
+          {/* Username */}
           <Form.Item
             name="username"
             rules={[{ required: true, message: "Please input your username!" }]}
@@ -74,6 +79,7 @@ const Login = () => {
             <Input placeholder="Username" />
           </Form.Item>
 
+          {/* Password */}
           <Form.Item
             name="password"
             rules={[{ required: true, message: "Please input your password!" }]}
@@ -81,18 +87,20 @@ const Login = () => {
             <Input.Password placeholder="Password" />
           </Form.Item>
 
+          {/* Submit Button */}
           <Form.Item style={{ textAlign: "right" }}>
-            <Button
-              type="primary"
-              htmlType="submit"
-              block
-              size="large"
-              loading={loading}
-            >
+            <Button type="primary" htmlType="submit" block size="large">
               Login
             </Button>
           </Form.Item>
         </Form>
+
+        {/* Link to Registration */}
+        <div style={{ textAlign: "center", marginTop: "15px" }}>
+          <Link to="/register" style={{ fontSize: "14px", color: "#1890ff" }}>
+            Don't have an account? Register here.
+          </Link>
+        </div>
       </Card>
     </div>
   );
