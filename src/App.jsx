@@ -1,14 +1,14 @@
-/* eslint-disable no-unused-vars */
+// App.jsx
 import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./components/Pages/Login/Login";
 import Registration from "./components/Pages/Registration/Registration";
 import Dashboard from "./components/Pages/Dashboard/Dashboard";
 import OBEDataConfig from "./components/Pages/Dashboard/OBEDataConfiguration/OBEDataConfiguration";
-import PEOToPILOMapping from "./components/Pages/Dashboard/OBEDataConfiguration/PEOToPILOMapping"
+import PEOToPILOMapping from "./components/Pages/Dashboard/OBEDataConfiguration/PEOToPILOMapping";
 import Curriculum from "./components/Pages/Dashboard/Curriculum/Curriculum";
-import POToCILOMapping from "./components/Pages/Dashboard/CourseSyllabus/POToCILOMapping"
-import CourseSyllabus from "./components/Pages/Dashboard/CourseSyllabus/CourseSyllabus"
+import POToCILOMapping from "./components/Pages/Dashboard/CourseSyllabus/POToCILOMapping";
+import CourseSyllabus from "./components/Pages/Dashboard/CourseSyllabus/CourseSyllabus";
 import "./index.css";
 
 const App = () => (
