@@ -1,0 +1,29 @@
+:where(.css-dev-only-do-not-override-apn68).ant-tabs .ant-tabs-tab {
+    position: relative;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    /* padding: 12px 0; */
+    padding-left: 5px;
+    padding-right: 5px;
+    font-size: 14px;
+    background: transparent;
+    border: 0;
+    outline: none;
+    cursor: pointer;
+    color: rgba(0, 0, 0, 0.88);
+    width: fit-content;
+    border-radius: 5px;
+}
+
+/* Active tab style */
+:where(.css-dev-only-do-not-override-apn68).ant-tabs .ant-tabs-tab-active {
+    background-color: var(--secondary-color) !important;
+    color: white !important;
+}
+
+:where(.css-dev-only-do-not-override-apn68).ant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: white;
+    text-shadow: 0 0 0.25px currentcolor;
+}

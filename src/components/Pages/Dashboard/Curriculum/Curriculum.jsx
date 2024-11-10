@@ -40,7 +40,7 @@ export default function Curriculum() {
 
   // Open Edit Modal
   function handleEditClick(course) {
-        setIsEditMode(true); // Set to Edit Mode
+        setIsEditMode(true); 
         setIsEditModalVisible(true);
         form.setFieldsValue(course);
     }
@@ -48,7 +48,7 @@ export default function Curriculum() {
   // Open Add Modal
   function handleAddClick() {
         form.resetFields();
-        setIsEditMode(false); // Set to Add Mode
+        setIsEditMode(false); 
         setIsEditModalVisible(true);
     }
 
@@ -151,6 +151,11 @@ export default function Curriculum() {
           // Columns definition for the table
           const columns = [ 
             {
+            title: 'Program',
+            dataIndex: 'program',
+            key: 'program',
+            },
+            {
               title: 'Course Code',
               dataIndex: 'courseCode',
               key: 'courseCode',
@@ -164,11 +169,6 @@ export default function Curriculum() {
               title: 'Year',
               dataIndex: 'year',
               key: 'year',
-            },
-            {
-            title: 'Program',
-            dataIndex: 'program',
-            key: 'program',
             },
             {
               title: 'Semester',
@@ -276,6 +276,7 @@ export default function Curriculum() {
                   <Option value="all">All Programs</Option>
                   <Option value="BSIT">BSIT</Option>
                   <Option value="BSIS">BSIS</Option>
+                  <Option value="BSSE">BSSE</Option>
                 </Select>
               </Col>
               <Col xs={24} sm={12} md={3}>
@@ -321,7 +322,6 @@ export default function Curriculum() {
       >
         <Form
           form={form}
-          initialValues={isEditMode ? form.getFieldsValue() : {}}
           layout="vertical"
         >
           <Row gutter={[16, 16]}>
@@ -431,6 +431,7 @@ export default function Curriculum() {
         open={isDeleteModalVisible}
         onCancel={handleDeleteCancel}
         onOk={handleDeleteConfirm}
+        okButtonProps={{ danger: true }}
         okText="Delete"
         cancelText="Cancel"
       >
