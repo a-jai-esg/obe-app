@@ -7,6 +7,7 @@ import Dashboard from "./components/Pages/Dashboard/Dashboard";
 import OBEDataConfig from "./components/Pages/Dashboard/OBEDataConfiguration/OBEDataConfiguration";
 import PEOToPILOMapping from "./components/Pages/Dashboard/OBEDataConfiguration/PEOToPILOMapping"
 import Curriculum from "./components/Pages/Dashboard/Curriculum/Curriculum";
+import POToCILOMapping from "./components/Pages/Dashboard/CourseSyllabus/POToCILOMapping"
 import CourseSyllabus from "./components/Pages/Dashboard/CourseSyllabus/CourseSyllabus"
 import "./index.css";
 
@@ -20,6 +21,7 @@ const App = () => (
       <Route path="/obe-data-configuration" element={<OBEDataConfig />} />
       <Route path="/peo-pilo-mapping" element={<PEOToPILOMapping />} />
       <Route path="/curriculum" element={<Curriculum />} />
+      <Route path="/po-cilo-mapping" element={<POToCILOMapping />} />
       <Route path="/course-syllabus" element={<CourseSyllabus />} />
     </Routes>
   </Router>
