@@ -1,8 +1,8 @@
 /* eslint-disable no-unused-vars */
 import React, { useState } from "react";
-import { Layout, Menu } from "antd";
-import { UserOutlined, AppstoreOutlined } from "@ant-design/icons";
-import { Link } from "react-router-dom";
+import { Layout, Menu, Modal } from "antd";
+import { UserOutlined, AppstoreOutlined, LogoutOutlined } from "@ant-design/icons";
+import { Link, useNavigate } from "react-router-dom";
 import UcLogo from "../../assets/Images/uc-logo.png";
 import "./Sidebar.css";
 
@@ -10,10 +10,26 @@ const { Sider } = Layout;
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   // Toggle sidebar collapse state
   const toggleCollapse = () => {
     setCollapsed(!collapsed);
+  };
+
+  // Handle logout with a confirmation modal
+  const handleLogout = () => {
+    Modal.confirm({
+      title: "Confirm Logout",
+      content: "Are you sure you want to log out?",
+      okText: "Logout",
+      cancelText: "Cancel",
+      onOk: () => {
+        // Clear authentication data here (e.g., localStorage/sessionStorage)
+        // localStorage.removeItem("authToken");
+        navigate("/login"); // Redirect to the login page
+      },
+    });
   };
 
   return (
@@ -41,8 +57,11 @@ const Sidebar = () => {
         <Menu.Item key="1" icon={<AppstoreOutlined />}>
           <Link to="/dashboard">Dashboard</Link>
         </Menu.Item>
-        <Menu.Item key="2" icon={<UserOutlined />}>
+        {/* <Menu.Item key="2" icon={<UserOutlined />}>
           <Link to="/profile">Profile</Link>
+        </Menu.Item> */}
+        <Menu.Item key="3" icon={<LogoutOutlined />} onClick={handleLogout}>
+          Logout
         </Menu.Item>
       </Menu>
     </Sider>
