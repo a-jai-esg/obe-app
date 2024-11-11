@@ -9,20 +9,52 @@ import PEOToPILOMapping from "./components/Pages/Dashboard/OBEDataConfiguration/
 import Curriculum from "./components/Pages/Dashboard/Curriculum/Curriculum";
 import POToCILOMapping from "./components/Pages/Dashboard/CourseSyllabus/POToCILOMapping";
 import CourseSyllabus from "./components/Pages/Dashboard/CourseSyllabus/CourseSyllabus";
+import ProtectedRoute from "./components/Pages/ProtectedRoute";
 import "./index.css";
 
 const App = () => (
   <Router>
     <Routes>
-      <Route path="/" element={<Login />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Registration />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/obe-data-configuration" element={<OBEDataConfig />} />
-      <Route path="/peo-pilo-mapping" element={<PEOToPILOMapping />} />
-      <Route path="/curriculum" element={<Curriculum />} />
-      <Route path="/po-cilo-mapping" element={<POToCILOMapping />} />
-      <Route path="/course-syllabus" element={<CourseSyllabus />} />
+      <Route
+        path="/"
+        element={<ProtectedRoute element={Login} isProtected={false} />}
+      />
+      <Route
+        path="/login"
+        element={<ProtectedRoute element={Login} isProtected={false} />}
+      />
+      <Route
+        path="/register"
+        element={<ProtectedRoute element={Registration} isProtected={false} />}
+      />
+      <Route
+        path="/dashboard"
+        element={<ProtectedRoute element={Dashboard} isProtected={true} />}
+      />
+      <Route
+        path="/obe-data-configuration"
+        element={<ProtectedRoute element={OBEDataConfig} isProtected={true} />}
+      />
+      <Route
+        path="/peo-pilo-mapping"
+        element={
+          <ProtectedRoute element={PEOToPILOMapping} isProtected={true} />
+        }
+      />
+      <Route
+        path="/curriculum"
+        element={<ProtectedRoute element={Curriculum} isProtected={true} />}
+      />
+      <Route
+        path="/po-cilo-mapping"
+        element={
+          <ProtectedRoute element={POToCILOMapping} isProtected={true} />
+        }
+      />
+      <Route
+        path="/course-syllabus"
+        element={<ProtectedRoute element={CourseSyllabus} isProtected={true} />}
+      />
     </Routes>
   </Router>
 );
