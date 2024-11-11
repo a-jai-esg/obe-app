@@ -40,25 +40,21 @@ export default function Curriculum() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentRecord, setCurrentRecord] = useState(null);
   const [currentType, setCurrentType] = useState(''); // 'PEO' or 'PILO'
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false); 
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [groupedData, setGroupedData] = useState([{ id: Date.now(), value: "" }]);  
 
   // Data arrays for PEO and PILO
+  // Modified data structure for PEO and PILO
   const PEOData = [
-    { key: "1", program: "BSIT", objective: "Apply IT skills." },
-    { key: "2", program: "BSIT", objective: "Pursue lifelong learning." },
-    { key: "3", program: "BSIS", objective: "Develop information systems." },
-    { key: "4", program: "BSIS", objective: "Lead IT-driven business transformation." },
-    { key: "5", program: "BSSE", objective: "Design and develop software systems." },
-    { key: "6", program: "BSSE", objective: "Solve real-world software engineering challenges." },
+    { key: "1", program: "BSIT", objectives: ["Apply IT skills.", "Pursue lifelong learning."] },
+    { key: "2", program: "BSIS", objectives: ["Develop information systems.", "Lead IT-driven business transformation."] },
+    { key: "3", program: "BSSE", objectives: ["Design and develop software systems.", "Solve real-world software engineering challenges."] },
   ];
   
   const PILOData = [
-    { key: "1", program: "BSIT", outcome: "Effective communication." },
-    { key: "2", program: "BSIT", outcome: "Problem-solving in IT." },
-    { key: "3", program: "BSIS", outcome: "Analyze business requirements." },
-    { key: "4", program: "BSIS", outcome: "Design IT solutions for business." },
-    { key: "5", program: "BSSE", outcome: "Implement software development methodologies." },
-    { key: "6", program: "BSSE", outcome: "Work in a team to develop software." },
+    { key: "1", program: "BSIT", outcomes: ["Effective communication.", "Problem-solving in IT."] },
+    { key: "2", program: "BSIS", outcomes: ["Analyze business requirements.", "Design IT solutions for business."] },
+    { key: "3", program: "BSSE", outcomes: ["Implement software development methodologies.", "Work in a team to develop software."] },
   ];
 
   const [filteredPEOData, setFilteredPEOData] = useState(PEOData);
@@ -66,7 +62,18 @@ export default function Curriculum() {
 
   const PEOColumns = [
     { title: "Program", dataIndex: "program", key: "program" },
-    { title: "Program Educational Objective", dataIndex: "objective", key: "objective" },
+    {
+      title: 'Program Educational Objectives',
+      dataIndex: 'objectives',
+      key: 'objectives',
+      render: (objectives) => (
+        <ul>
+          {objectives.map((objective, index) => (
+            <li key={index}>{objective}</li>
+          ))}
+        </ul>
+      ),
+    },
     {
       title: "Actions",
       key: "action",
@@ -98,7 +105,18 @@ export default function Curriculum() {
 
   const PILOColumns = [
     { title: "Program", dataIndex: "program", key: "program" },
-    { title: "Program Intended Learning Outcome", dataIndex: "outcome", key: "outcome" },
+    {
+      title: 'Program Intented Learning Outcomes',
+      dataIndex: 'outcomes',
+      key: 'outcomes',
+      render: (outcomes) => (
+        <ul>
+          {outcomes.map((outcome, index) => (
+            <li key={index}>{outcome}</li>
+          ))}
+        </ul>
+      ),
+    },
     {
       title: "Actions",
       key: "action",
@@ -130,13 +148,33 @@ export default function Curriculum() {
     },
   ];
 
+  // function handleEditClick(record, type) {
+  //   setCurrentType(type);
+  //   setIsEditMode(true);
+  //   setCurrentRecord(record);
+  //   form.setFieldsValue(record);
+  //   setIsModalVisible(true);
+  // }
   function handleEditClick(record, type) {
     setCurrentType(type);
     setIsEditMode(true);
     setCurrentRecord(record);
     form.setFieldsValue(record);
+  
+    if (type === 'PEO') {
+      setGroupedData(record.objectives.map((objective) => ({
+        id: Date.now() + Math.random(), // Unique ID for each objective
+        value: objective,
+      })));
+    } else {
+      setGroupedData(record.outcomes.map((outcome) => ({
+        id: Date.now() + Math.random(), // Unique ID for each outcome
+        value: outcome,
+      })));
+    }
     setIsModalVisible(true);
   }
+  
 
   function handleAddClick(type) {
     setCurrentType(type);
@@ -149,6 +187,7 @@ export default function Curriculum() {
     form.resetFields();
     setIsModalVisible(false);
     setIsEditMode(false);
+    setGroupedData([{ id: Date.now(), value: "" }]); 
   }
 
   function handleDeleteClick(record) {
@@ -183,8 +222,28 @@ export default function Curriculum() {
       .then((values) => {
         if (isEditMode) {
           console.log(`Editing ${currentType}`, values);
+          if (currentType === 'PEO') {
+            // Update PEO data
+            const updatedData = filteredPEOData.map(item =>
+              item.key === currentRecord.key ? { ...item, objectives: groupedData.map(field => field.value) } : item
+            );
+            setFilteredPEOData(updatedData);
+          } else {
+            // Update PILO data
+            const updatedData = filteredPILOData.map(item =>
+              item.key === currentRecord.key ? { ...item, outcomes: groupedData.map(field => field.value) } : item
+            );
+            setFilteredPILOData(updatedData);
+          }
         } else {
           console.log(`Adding new ${currentType}`, values);
+          if (currentType === 'PEO') {
+            // Add new PEO data
+            setFilteredPEOData([...filteredPEOData, { ...values, objectives: groupedData.map(field => field.value) }]);
+          } else {
+            // Add new PILO data
+            setFilteredPILOData([...filteredPILOData, { ...values, outcomes: groupedData.map(field => field.value) }]);
+          }
         }
         form.resetFields();
         setIsModalVisible(false);
@@ -197,6 +256,21 @@ export default function Curriculum() {
   function handleProgramFilterChange(value) {
     setFilteredPEOData(PEOData.filter(course => course.program === value || value === 'all'));
     setFilteredPILOData(PILOData.filter(course => course.program === value || value === 'all'));
+  }
+
+  function handleGroupedData(value, id) {
+    const newgroupedData = groupedData.map((field) =>
+      field.id === id ? { ...field, value } : field
+    );
+    setGroupedData(newgroupedData);
+  }
+
+  function handleAdd() {
+    setGroupedData([...groupedData, { id: Date.now(), value: "" }]);
+  }
+
+  function handleRemove(id) {
+    setGroupedData(groupedData.filter((field) => field.id !== id));
   }
 
   useEffect(() => {
@@ -294,6 +368,7 @@ export default function Curriculum() {
               onOk={handleSaveChanges}
               okText="Save Changes"
               width={600}
+              maskClosable={false}
             >
               <Form form={form} layout="vertical">
               <Row gutter={[16, 16]}>
@@ -311,13 +386,103 @@ export default function Curriculum() {
                     </Form.Item>
                 </Col>
                 </Row>
-                <Form.Item
-                  name={currentType === 'PEO' ? 'objective' : 'outcome'}
-                  label={`${currentType === 'PEO' ? 'Program Educational Objective' : 'Program Outcome/Program Intended Learning Outcome'}`}
-                  rules={[{ required: true, message: `Please enter a ${currentType === 'PEO' ? 'PEO Objective' : 'PILO Outcome'}` }]}
-                >
-                  <Input.TextArea rows={3} />
-                </Form.Item>
+                {currentType !== "PILO" ? (
+                  <>
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24}>
+                        <Form.Item
+                          label="Program Educational Objectives"
+                          name="objectives"
+                          rules={[{ required: true, message: "Please add at least one objective" }]}
+                        >
+                          {groupedData.map((field, index) => (
+                            <Row key={field.id} gutter={[16, 8]}>
+                              <Col xs={24} md={20}>
+                                <Input
+                                  style={{marginBottom:"15px"}}
+                                  placeholder="Enter Objective"
+                                  value={field.value}
+                                  onChange={(e) => handleGroupedData(e.target.value, field.id)}
+                                />
+                              </Col>
+                              <Col xs={24} md={4}>
+                                <Button
+                                  style={{marginBottom:"15px"}}
+                                  type="text"
+                                  icon={<DeleteOutlined />}
+                                  danger
+                                  onClick={() => handleRemove(field.id)}
+                                />
+                              </Col>
+                            </Row>
+                          ))}
+                          
+                          <Row>
+                            <Col>
+                            <Button
+                              type="dashed"
+                              icon={<PlusCircleOutlined />}
+                              onClick={handleAdd}
+                              block
+                              style={{ marginTop: 10 }}
+                            >
+                              Add Outcome
+                            </Button>
+                            </Col>
+                          </Row>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </>
+                ) : (
+                  <>
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24}>
+                        <Form.Item
+                          label="Program Intended Learning Outcomes"
+                          name="outcomes"
+                          rules={[{ required: true, message: "Please add at least one outcome" }]}
+                        >
+                          {groupedData.map((field, index) => (
+                            <Row key={field.id} gutter={[16, 8]}>
+                              <Col xs={24} md={20}>
+                                <Input
+                                  style={{marginBottom:"15px"}}
+                                  placeholder="Enter Outcome"
+                                  value={field.value}
+                                  onChange={(e) => handleGroupedData(e.target.value, field.id)}
+                                />
+                              </Col>
+                              <Col xs={24} md={4}>
+                                <Button
+                                  style={{marginBottom:"15px"}}
+                                  type="text"
+                                  icon={<DeleteOutlined />}
+                                  danger
+                                  onClick={() => handleRemove(field.id)}
+                                />
+                              </Col>
+                            </Row>
+                          ))}
+                          
+                          <Row>
+                            <Col>
+                            <Button
+                              type="dashed"
+                              icon={<PlusCircleOutlined />}
+                              onClick={handleAdd}
+                              block
+                              style={{ marginTop: 10 }}
+                            >
+                              Add Outcome
+                            </Button>
+                            </Col>
+                          </Row>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </>
+                )}
               </Form>
             </Modal>
 
