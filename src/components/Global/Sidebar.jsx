@@ -1,9 +1,15 @@
-/* eslint-disable no-unused-vars */
+// Sidebar.jsx
 import React, { useState } from "react";
 import { Layout, Menu, Modal } from "antd";
-import { UserOutlined, AppstoreOutlined, LogoutOutlined } from "@ant-design/icons";
+import {
+  UserOutlined,
+  AppstoreOutlined,
+  LogoutOutlined,
+} from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import UcLogo from "../../assets/Images/uc-logo.png";
+import axios from "axios";
+import Cookies from "js-cookie";
 import "./Sidebar.css";
 
 const { Sider } = Layout;
@@ -26,8 +32,22 @@ const Sidebar = () => {
       cancelText: "Cancel",
       onOk: () => {
         // Clear authentication data here (e.g., localStorage/sessionStorage)
-        // localStorage.removeItem("authToken");
-        navigate("/login"); // Redirect to the login page
+        localStorage.removeItem("token");
+        axios
+          .post(
+            "http://localhost:3000/api/users/logout",
+            {},
+            { withCredentials: true }
+          )
+          .then(() => {
+            // After logout, redirect to login page
+            navigate("/login");
+          })
+          .catch((error) => {
+            console.error("Logout failed:", error);
+          });
+
+        Cookies.remove("token");
       },
     });
   };
@@ -42,10 +62,10 @@ const Sidebar = () => {
     >
       {/* Logo with onClick event to toggle collapse */}
       <div className="sidebar-logo" onClick={toggleCollapse}>
-        <img 
-          src={UcLogo} 
-          alt="UC Logo" 
-          className={`logo ${collapsed ? "collapsed-logo" : "expanded-logo"}`} 
+        <img
+          src={UcLogo}
+          alt="UC Logo"
+          className={`logo ${collapsed ? "collapsed-logo" : "expanded-logo"}`}
         />
       </div>
 
