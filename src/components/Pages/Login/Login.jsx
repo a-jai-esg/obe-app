@@ -14,12 +14,15 @@ const Login = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // Send login request to the backend
+      // Configure Axios to include credentials (cookies)
       const response = await axios.post(
         "http://localhost:3000/api/users/login",
         {
           username: values.username,
           password: values.password,
+        },
+        {
+          withCredentials: true, // Ensure cookies are sent and received
         }
       );
 
@@ -31,7 +34,7 @@ const Login = () => {
       history("/dashboard");
     } catch (error) {
       setLoading(false);
-      console.error("Login failed:", error.response.data.message);
+      console.error("Login failed:", error.message);
     }
   };
 
