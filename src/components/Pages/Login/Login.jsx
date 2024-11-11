@@ -1,17 +1,38 @@
-/* eslint-disable no-unused-vars */
-import { React, useEffect } from "react";
+// components/Pages/Login/Login.jsx
+import React, { useState, useEffect } from "react";
 import { Form, Input, Button, Card } from "antd";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom"; // Import Link from react-router-dom
+import { useNavigate, Link } from "react-router-dom";
+import axios from "axios"; // Import axios
+import { setToken } from "../../utils/auth"; // A utility function to store token in localStorage
 import logo from "/uc-logo.png";
-import "./Login.css"
+import "./Login.css";
 
 const Login = () => {
+  const [loading, setLoading] = useState(false);
   const history = useNavigate();
 
-  const onFinish = (values) => {
-    console.log("Success:", values);
-    history.push("/dashboard"); // Redirect to dashboard after successful login
+  const onFinish = async (values) => {
+    setLoading(true);
+    try {
+      // Send login request to the backend
+      const response = await axios.post(
+        "http://localhost:3000/api/users/login",
+        {
+          username: values.username,
+          password: values.password,
+        }
+      );
+
+      // Save the token in localStorage
+      const { token } = response.data;
+      setToken(token);
+
+      // Redirect to dashboard after successful login
+      history("/dashboard");
+    } catch (error) {
+      setLoading(false);
+      console.error("Login failed:", error.response.data.message);
+    }
   };
 
   useEffect(() => {
