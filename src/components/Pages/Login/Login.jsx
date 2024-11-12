@@ -14,7 +14,6 @@ const Login = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // Configure Axios to include credentials (cookies)
       const response = await axios.post(
         "http://localhost:3000/api/users/login",
         {
@@ -22,13 +21,16 @@ const Login = () => {
           password: values.password,
         },
         {
-          withCredentials: true, // Ensure cookies are sent and received
+          withCredentials: true,
         }
       );
 
-      // Save the token in localStorage
-      const { token } = response.data;
+      // Destructure the response to get token and user data
+      const { token, user } = response.data;
+
+      // Store the token and user data in localStorage
       setToken(token);
+      localStorage.setItem("user", JSON.stringify(user));
 
       // Redirect to dashboard after successful login
       history("/dashboard");

@@ -33,6 +33,8 @@ const Sidebar = () => {
       onOk: () => {
         // Clear authentication data here (e.g., localStorage/sessionStorage)
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
         axios
           .post(
             "http://localhost:3000/api/users/logout",
