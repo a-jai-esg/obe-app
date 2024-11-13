@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // App.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -9,6 +10,7 @@ import PEOToPILOMapping from "./components/Pages/Dashboard/OBEDataConfiguration/
 import Curriculum from "./components/Pages/Dashboard/Curriculum/Curriculum";
 import POToCILOMapping from "./components/Pages/Dashboard/CourseSyllabus/POToCILOMapping";
 import CourseSyllabus from "./components/Pages/Dashboard/CourseSyllabus/CourseSyllabus";
+import OutcomesAttainmentReport from "./components/Pages/Dashboard/OutcomesAttainmentReport/OutcomesAttainmentReport";
 import ProtectedRoute from "./components/Pages/ProtectedRoute";
 import "./index.css";
 
@@ -54,6 +56,10 @@ const App = () => (
       <Route
         path="/course-syllabus"
         element={<ProtectedRoute element={CourseSyllabus} isProtected={true} />}
+      />
+      <Route
+        path="/outcomes-report"
+        element={<ProtectedRoute element={OutcomesAttainmentReport} isProtected={true} />}
       />
     </Routes>
   </Router>

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // components/Pages/Login/Login.jsx
 import React, { useState, useEffect } from "react";
 import { Form, Input, Button, Card } from "antd";
@@ -41,7 +42,7 @@ const Login = () => {
   };
 
   useEffect(() => {
-    document.title = "Login - OBE Application";
+    document.title = "OBE Application";
   }, []);
 
   return (
