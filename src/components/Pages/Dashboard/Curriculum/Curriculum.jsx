@@ -18,12 +18,11 @@ import {
   Modal,
   Form,
   Input,
-  InputNumber,
 } from "antd";
 import Sidebar from "../../../Global/Sidebar";
+import axios from "axios";
 import "./Curriculum.css";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 
 const { Content } = Layout;
 const { Option } = Select;
@@ -33,15 +32,16 @@ export default function Curriculum() {
   const [loading, setLoading] = useState(true);
   const [form] = Form.useForm();
 
-  // States for handling modals
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false); // Track edit mode
 
-  // State for program data fetched from API
   const [allData, setAllData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
+  const [revisionCodeData, setRevisionCodeData] = useState([]);
+
   const [programTitles, setProgramTitles] = useState([]);
+  const [selectedProgramTitle, setSelectedProgramTitle] = useState(null); // Track selected program title for filtering
+  const [selectedProgramCode, setSelectedProgramCode] = useState(null);
 
   // Fetch program data from API
   useEffect(() => {
@@ -50,32 +50,78 @@ export default function Curriculum() {
     const parsedObject = JSON.parse(extractedUserObject);
 
     const departmentCode = parsedObject.Department_Code;
-    console.log(departmentCode);
 
     axios
       .post(
         "http://localhost:3000/api/system/programs-master/read",
-        {
-          Department_Code: departmentCode,
-        },
+        { Department_Code: departmentCode },
         { withCredentials: true }
-      ) // Update with your API endpoint
+      )
       .then((response) => {
         const data = response.data;
         setAllData(data);
         setFilteredData(data);
         setLoading(false);
-        // Extract unique program titles
         const titles = Array.from(
           new Set(data.map((item) => item.Program_Title))
         );
+
         setProgramTitles(titles);
+        setProgramCodes(programCode);
       })
       .catch((error) => {
         console.error("Error fetching program data:", error);
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (selectedProgramTitle) {
+      setLoading(true); // Start loading before the API call
+
+      const findProgramByTitle = (title) => {
+        return filteredData.filter(
+          (program) => program.Program_Title === title
+        );
+      };
+
+      const programCode = findProgramByTitle(selectedProgramTitle);
+      if (programCode.length > 0) {
+        console.log(programCode[0].Program_Code); // get first index
+
+        setSelectedProgramCode(programCode[0].Program_Code);
+
+        axios
+          .post(
+            "http://localhost:3000/api/system/curriculum-master/read", // Update with the correct endpoint
+            { Program_Code: programCode[0].Program_Code }, // Pass selected program title or code
+            { withCredentials: true }
+          )
+          .then((response) => {
+            const data = response.data;
+            setRevisionCodeData(Array.isArray(data) ? data : [data]); // Ensure the data is always an array
+            setLoading(false); // Stop loading once data is received
+          })
+          .catch((error) => {
+            console.error("Error fetching revision codes:", error);
+            setLoading(false);
+          });
+      } else {
+        setLoading(false); // Stop loading if no program code is found
+      }
+    }
+  }, [selectedProgramTitle]);
+
+  // Handle program title filter change
+  function handleFilterChange(value) {
+    setSelectedProgramTitle(value);
+    if (value) {
+      const filtered = allData.filter((item) => item.Program_Title === value);
+      setFilteredData(filtered);
+    } else {
+      setFilteredData(allData); // Reset filter
+    }
+  }
 
   // Open Edit Modal
   function handleEditClick(course) {
@@ -98,56 +144,101 @@ export default function Curriculum() {
     setIsEditModalVisible(false);
   }
 
+  // Handle save changes (add or update)
   function handleSaveChanges() {
     form
       .validateFields()
       .then((values) => {
+        console.log(isEditMode);
+
         if (isEditMode) {
-          // Handle update logic for the course
-          console.log("Editing course", values);
-          form.resetFields();
+          // Update course
+          axios
+            .put(
+              "http://localhost:3000/api/system/curriculum-courses-file-master/update",
+              {
+                Program_Code: selectedProgramCode,
+                Curr_Rev_Code: values.Curr_Rev_Code,
+                Curr_Course_Code: values.Curr_Course_Code,
+                Curr_Course_Desc: values.Curr_Course_Desc,
+                Curr_Year: Number(values.Curr_Year),
+                Curr_Sem: Number(values.Curr_Sem),
+                Curr_Units: Number(values.Curr_Units),
+                Curr_LEC_Hrs: Number(values.Curr_LEC_Hrs),
+                Curr_LAB_Hrs: Number(values.Curr_LAB_Hrs),
+                Curr_Status: 1,
+                Curr_CRS_CustomField1: null,
+                Curr_CRS_CustomField2: null,
+                Curr_CRS_CustomField3: null,
+              },
+              { withCredentials: true }
+            )
+            .then((response) => {
+              const updatedData = response.data;
+              setAllData(updatedData);
+              setFilteredData(updatedData);
+              setIsEditModalVisible(false);
+              form.resetFields();
+            })
+            .catch((error) => {
+              console.error("Error updating course:", error);
+            });
         } else {
-          // Handle add logic for the new course
-          console.log("Adding new course", values);
-          form.resetFields();
+          // Add new course
+          axios
+            .post(
+              "http://localhost:3000/api/system/curriculum-courses-file-master/create",
+              {
+                Program_Code: selectedProgramCode,
+                Curr_Rev_Code: values.Curr_Rev_Code,
+                Curr_Course_Code: values.Curr_Course_Code,
+                Curr_Course_Desc: values.Curr_Course_Desc,
+                Curr_Year: Number(values.Curr_Year),
+                Curr_Sem: Number(values.Curr_Sem),
+                Curr_Units: Number(values.Curr_Units),
+                Curr_LEC_Hrs: Number(values.Curr_LEC_Hrs),
+                Curr_LAB_Hrs: Number(values.Curr_LAB_Hrs),
+                Curr_Status: 1,
+                Curr_CRS_CustomField1: null,
+                Curr_CRS_CustomField2: null,
+                Curr_CRS_CustomField3: null,
+              },
+              { withCredentials: true }
+            )
+            .then((response) => {
+              const newData = response.data;
+              setAllData(newData);
+              setFilteredData(newData);
+              setIsEditModalVisible(false);
+              form.resetFields();
+            })
+            .catch((error) => {
+              console.error("Error adding course:", error);
+            });
         }
-        setIsEditModalVisible(false); // Close the modal after saving
-        form.resetFields(); // Reset form fields after save
       })
       .catch((info) => {
         console.log("Validation failed:", info);
       });
   }
 
-  // Handle Delete Confirmation
-  function handleDeleteClick(course) {
-    setIsDeleteModalVisible(true);
-  }
-
-  function handleDeleteConfirm() {
-    // Handle the deletion logic here
-    setIsDeleteModalVisible(false);
-  }
-
-  function handleDeleteCancel() {
-    form.resetFields();
-    setIsDeleteModalVisible(false);
-  }
-
-  // Handle filter change for program
-  function handleProgramFilterChange(value) {
-    setFilteredData(
-      allData.filter(
-        (course) => course.Program_Title === value || value === "all"
+  // Handle delete
+  function handleDeleteClick(courseId) {
+    axios
+      .delete(
+        `http://localhost:3000/api/system/curriculum-courses-file-master/delete`,
+        {
+          withCredentials: true,
+        }
       )
-    );
-  }
-
-  // Handle filter change for year
-  function handleYearFilterChange(value) {
-    setFilteredData(
-      allData.filter((course) => course.year === value || value === "all")
-    );
+      .then((response) => {
+        const updatedData = response.data;
+        setAllData(updatedData);
+        setFilteredData(updatedData);
+      })
+      .catch((error) => {
+        console.error("Error deleting course:", error);
+      });
   }
 
   const columns = [
@@ -182,6 +273,11 @@ export default function Curriculum() {
       key: "units",
     },
     {
+      title: "Rev Code",
+      dataIndex: "revCode",
+      key: "revCode",
+    },
+    {
       title: "Effective Year",
       dataIndex: "effectiveYear",
       key: "effectiveYear",
@@ -189,35 +285,32 @@ export default function Curriculum() {
     {
       title: "",
       key: "action",
-      render: (_, record) => {
-        const menu = (
-          <Menu>
-            <Menu.Item
-              key="edit"
-              icon={<EditOutlined />}
-              onClick={() => handleEditClick(record)}
-            >
-              Edit
-            </Menu.Item>
-            <Menu.Item
-              key="delete"
-              icon={<DeleteOutlined />}
-              onClick={() => handleDeleteClick(record)}
-              danger
-            >
-              Delete
-            </Menu.Item>
-          </Menu>
-        );
-
-        return (
-          <Dropdown overlay={menu} trigger={["click"]}>
-            <Button>
-              Actions <DownOutlined />
-            </Button>
-          </Dropdown>
-        );
-      },
+      render: (_, record) => (
+        <Dropdown
+          overlay={
+            <Menu>
+              <Menu.Item
+                key="edit"
+                icon={<EditOutlined />}
+                onClick={() => handleEditClick(record)}
+              >
+                Edit
+              </Menu.Item>
+              <Menu.Item
+                key="delete"
+                icon={<DeleteOutlined />}
+                onClick={() => handleDeleteClick(record.id)} // Use course ID
+              >
+                Delete
+              </Menu.Item>
+            </Menu>
+          }
+        >
+          <Button>
+            Actions <DownOutlined />
+          </Button>
+        </Dropdown>
+      ),
     },
   ];
 
@@ -247,35 +340,21 @@ export default function Curriculum() {
               </Col>
             </Row>
 
-            <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
-              <Col>
-                <span style={{ marginRight: 8 }}>
-                  <strong>Filter by: </strong>
-                </span>
-              </Col>
-              <Col xs={24} sm={12} md={8}>
+            {/* Filter Dropdown */}
+            <Row style={{ marginBottom: 20 }}>
+              <Col span={6}>
                 <Select
-                  defaultValue="all"
+                  placeholder="Select Program"
+                  value={selectedProgramTitle}
+                  onChange={handleFilterChange}
                   style={{ width: "100%" }}
-                  onChange={handleProgramFilterChange}
                 >
-                  <Option value="all">All Programs</Option>
+                  <Option value={null}>All Programs</Option>
                   {programTitles.map((title) => (
                     <Option key={title} value={title}>
                       {title}
                     </Option>
                   ))}
-                </Select>
-              </Col>
-              <Col xs={24} sm={12} md={3}>
-                <Select
-                  defaultValue="all"
-                  style={{ width: "100%" }}
-                  onChange={handleYearFilterChange}
-                >
-                  <Option value="all">All Years</Option>
-                  <Option value="1st Year">1st Year</Option>
-                  <Option value="2nd Year">2nd Year</Option>
                 </Select>
               </Col>
             </Row>
@@ -285,20 +364,19 @@ export default function Curriculum() {
                 <Spin size="large" />
               </div>
             ) : (
-              <div className="table-shadow-wrapper">
-                <Table
-                  columns={columns}
-                  dataSource={filteredData}
-                  bordered
-                  pagination={{ pageSize: 10 }}
-                  responsive={true}
-                />
-              </div>
+              <Table
+                columns={columns}
+                dataSource={filteredData}
+                bordered
+                pagination={{ pageSize: 10 }}
+                responsive={true}
+              />
             )}
           </div>
         </Content>
       </Layout>
 
+      {/* Add/Edit Curriculum Modal */}
       <Modal
         title={isEditMode ? "Edit Curriculum" : "Add Curriculum"}
         open={isEditModalVisible}
@@ -309,8 +387,9 @@ export default function Curriculum() {
         maskClosable={false}
       >
         <Form form={form} layout="vertical">
+          {/* Program Field Spanning Full Width */}
           <Row gutter={[16, 16]}>
-            <Col xs={24}>
+            <Col xs={24} sm={24} md={24}>
               <Form.Item
                 label="Program"
                 name="program"
@@ -327,138 +406,148 @@ export default function Curriculum() {
             </Col>
           </Row>
 
+          {/* Effective Year, Revision Code, and Course Code in One Row */}
           <Row gutter={[16, 16]}>
-            <Col xs={24} md={12}>
+            <Col xs={24} sm={8} md={8}>
+              <Form.Item
+                label="Course Code"
+                name="Curr_Course_Code"
+                rules={[
+                  { required: true, message: "Please enter course code" },
+                ]}
+              >
+                <Input placeholder="Enter Course Code" />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={8} md={8}>
               <Form.Item
                 label="Effective Year"
                 name="effectiveYear"
                 rules={[
-                  {
-                    required: true,
-                    message: "Please enter effective year",
-                  },
+                  { required: true, message: "Please enter effective year" },
                 ]}
               >
                 <Input placeholder="Enter Effective Year" />
               </Form.Item>
             </Col>
 
-            <Col xs={24} md={12}>
+            <Col xs={24} sm={8} md={8}>
+              {/* Revision Code Field */}
               <Form.Item
-                label="Course Code"
-                name="courseCode"
+                label="Revision Code"
+                name="Curr_Rev_Code"
                 rules={[
-                  {
-                    required: true,
-                    message: "Please enter course code",
-                  },
+                  { required: true, message: "Please select revision code" },
                 ]}
               >
-                <Input placeholder="Enter Course Code" />
+                <Select placeholder="Select Revision Code" loading={loading}>
+                  {revisionCodeData.map((revCode) => (
+                    <Option
+                      key={revCode.Curr_Rev_Code}
+                      value={revCode.Curr_Rev_Code}
+                    >
+                      {revCode.Curr_Rev_Code} - {revCode.Curr_Status} (
+                      {revCode.Curr_Year})
+                    </Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
 
+          {/* Descriptive Title, Year, Semester, and Units in One Row */}
           <Row gutter={[16, 16]}>
-            <Col xs={24}>
+            <Col xs={24} sm={8} md={8}>
               <Form.Item
                 label="Descriptive Title"
-                name="descriptiveTitle"
+                name="Curr_Course_Desc"
                 rules={[
-                  {
-                    required: true,
-                    message: "Please enter descriptive title",
-                  },
+                  { required: true, message: "Please enter descriptive title" },
                 ]}
               >
                 <Input placeholder="Enter Descriptive Title" />
               </Form.Item>
             </Col>
-          </Row>
 
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={12}>
+            <Col xs={24} sm={8} md={8}>
               <Form.Item
                 label="Year"
-                name="year"
-                rules={[
-                  {
-                    required: true,
-                    message: "Please enter year",
-                  },
-                ]}
+                name="Curr_Year"
+                rules={[{ required: true, message: "Please select a year" }]}
               >
-                <Input placeholder="Enter Year" />
+                <Select placeholder="Select Year">
+                  <Option value="1">1</Option>
+                  <Option value="2">2</Option>
+                  <Option value="3">3</Option>
+                  <Option value="4">4</Option>
+                </Select>
               </Form.Item>
             </Col>
 
-            <Col xs={24} md={12}>
+            <Col xs={24} sm={8} md={8}>
               <Form.Item
                 label="Semester"
-                name="semester"
+                name="Curr_Sem"
                 rules={[
-                  {
-                    required: true,
-                    message: "Please enter semester",
-                  },
+                  { required: true, message: "Please select a semester" },
                 ]}
               >
-                <Input placeholder="Enter Semester" />
+                <Select placeholder="Select Semester">
+                  <Option value="1">1st Semester</Option>
+                  <Option value="2">2nd Semester</Option>
+                  <Option value="4">Summer</Option>
+                </Select>
               </Form.Item>
             </Col>
-          </Row>
 
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={12}>
+            <Col xs={24} sm={8} md={8}>
               <Form.Item
                 label="Units"
-                name="units"
-                rules={[
-                  {
-                    required: true,
-                    message: "Please enter units",
-                  },
-                ]}
+                name="Curr_Units"
+                rules={[{ required: true, message: "Please enter units" }]}
               >
                 <Input placeholder="Enter Units" />
               </Form.Item>
             </Col>
 
-            <Col xs={24} md={12}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item
-                label="Hours"
-                name="hours"
+                label="Hours Lecture"
+                name="Curr_LEC_Hrs"
+                rules={[
+                  { required: true, message: "Please enter hours for lecture" },
+                ]}
+              >
+                <Input placeholder="Enter Hours for Lecture" />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item
+                label="Hours Laboratory"
+                name="Curr_LAB_Hrs"
                 rules={[
                   {
                     required: true,
-                    message: "Please enter hours",
+                    message: "Please enter hours for laboratory",
                   },
                 ]}
               >
-                <Input placeholder="Enter Hours" />
+                <Input placeholder="Enter Hours for Laboratory" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Row gutter={[16, 16]}>
-            <Col xs={24}>
-              <Form.Item>
-                <Button type="primary" onClick={handleSaveChanges}>
-                  {isEditMode ? "Save Changes" : "Add Curriculum"}
-                </Button>
-              </Form.Item>
-            </Col>
-          </Row>
+          {/* Save Changes Button */}
+          <Button
+            type="primary"
+            onClick={handleSaveChanges}
+            style={{ width: "100%" }}
+          >
+            Save Changes
+          </Button>
         </Form>
-      </Modal>
-
-      <Modal
-        title="Confirm Delete"
-        open={isDeleteModalVisible}
-        onOk={handleDeleteConfirm}
-        onCancel={handleDeleteCancel}
-      >
-        <p>Are you sure you want to delete this course?</p>
       </Modal>
     </Layout>
   );
