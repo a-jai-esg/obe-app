@@ -43,6 +43,8 @@ export default function Curriculum() {
   const [selectedProgramTitle, setSelectedProgramTitle] = useState(null); // Track selected program title for filtering
   const [selectedProgramCode, setSelectedProgramCode] = useState(null);
 
+  const [tableData, setTableData] = useState([]);
+
   // Fetch program data from API
   useEffect(() => {
     setLoading(true);
@@ -67,7 +69,36 @@ export default function Curriculum() {
         );
 
         setProgramTitles(titles);
-        setProgramCodes(programCode);
+      })
+      .catch((error) => {
+        console.error("Error fetching program data:", error);
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    const extractedUserObject = localStorage.getItem("user");
+    const parsedObject = JSON.parse(extractedUserObject);
+
+    const departmentCode = parsedObject.Department_Code;
+
+    axios
+      .post(
+        "http://localhost:3000/api/system/programs-master/read",
+        { Department_Code: departmentCode },
+        { withCredentials: true }
+      )
+      .then((response) => {
+        const data = response.data;
+        setAllData(data);
+        setFilteredData(data);
+        setLoading(false);
+        const titles = Array.from(
+          new Set(data.map((item) => item.Program_Title))
+        );
+
+        setProgramTitles(titles);
       })
       .catch((error) => {
         console.error("Error fetching program data:", error);
@@ -87,23 +118,74 @@ export default function Curriculum() {
 
       const programCode = findProgramByTitle(selectedProgramTitle);
       if (programCode.length > 0) {
-        console.log(programCode[0].Program_Code); // get first index
+        console.log(programCode[0].Program_Code); // Get first index
 
         setSelectedProgramCode(programCode[0].Program_Code);
 
         axios
           .post(
             "http://localhost:3000/api/system/curriculum-master/read", // Update with the correct endpoint
-            { Program_Code: programCode[0].Program_Code }, // Pass selected program title or code
+            { program_code: programCode[0].Program_Code }, // Pass selected program code
+            { withCredentials: true }
+          )
+          .then((response) => {
+            const revisionCodes = response.data;
+            setRevisionCodeData(
+              Array.isArray(revisionCodes) ? revisionCodes : [revisionCodes]
+            );
+            setLoading(false); // Stop loading after the API call
+          })
+          .catch((error) => {
+            console.error("Error fetching revision codes:", error);
+            setLoading(false); // Stop loading if there's an error
+          });
+      }
+    }
+  }, [selectedProgramTitle, filteredData]);
+
+  useEffect(() => {
+    if (selectedProgramTitle) {
+      setLoading(true); // Start loading before the API call
+
+      const findProgramByTitle = (title) => {
+        return filteredData.filter(
+          (program) => program.Program_Title === title
+        );
+      };
+
+      const programCode = findProgramByTitle(selectedProgramTitle);
+      if (programCode.length > 0) {
+        console.log(programCode[0].Program_Code); // get first index
+
+        setSelectedProgramCode(programCode[0].Program_Code);
+
+        axios
+          .post(
+            "http://localhost:3000/api/system/curriculum-courses-file-master/read", // Update with the correct endpoint
+            { program_code: programCode[0].Program_Code }, // Pass selected program title or code
             { withCredentials: true }
           )
           .then((response) => {
             const data = response.data;
-            setRevisionCodeData(Array.isArray(data) ? data : [data]); // Ensure the data is always an array
+
+            // Create filteredTableData as an array
+            const filteredTableData = data.map((item) => ({
+              record_id: item.Record_ID,
+              program: item.Program_Code,
+              course_code: item.Curr_Course_Code,
+              descriptive_title: item.Curr_Course_Desc,
+              year: item.Curr_Year,
+              semester: item.Curr_Sem,
+              units: item.Curr_Units,
+              rev_code: item.Curr_Rev_Code,
+              effective_year: item.Effective_Year,
+            }));
+
+            setTableData(filteredTableData); // Set filteredTableData as an array
             setLoading(false); // Stop loading once data is received
           })
           .catch((error) => {
-            console.error("Error fetching revision codes:", error);
+            console.error("Error table data:", error);
             setLoading(false);
           });
       } else {
@@ -144,6 +226,40 @@ export default function Curriculum() {
     setIsEditModalVisible(false);
   }
 
+  // function to fetch table data:
+  // Function to get table data
+  function getTableData(programCode) {
+    setLoading(true);
+    axios
+      .post(
+        "http://localhost:3000/api/system/curriculum-courses-file-master/read",
+        { program_code: programCode },
+        { withCredentials: true }
+      )
+      .then((response) => {
+        const data = response.data;
+
+        const filteredTableData = data.map((item) => ({
+          record_id: item.Record_ID,
+          program: item.Program_Code,
+          course_code: item.Curr_Course_Code,
+          descriptive_title: item.Curr_Course_Desc,
+          year: item.Curr_Year,
+          semester: item.Curr_Sem,
+          units: item.Curr_Units,
+          rev_code: item.Curr_Rev_Code,
+          effective_year: item.Effective_Year,
+        }));
+
+        setTableData(filteredTableData);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error fetching table data:", error);
+        setLoading(false);
+      });
+  }
+
   // Handle save changes (add or update)
   function handleSaveChanges() {
     form
@@ -157,19 +273,19 @@ export default function Curriculum() {
             .put(
               "http://localhost:3000/api/system/curriculum-courses-file-master/update",
               {
-                Program_Code: selectedProgramCode,
-                Curr_Rev_Code: values.Curr_Rev_Code,
-                Curr_Course_Code: values.Curr_Course_Code,
-                Curr_Course_Desc: values.Curr_Course_Desc,
-                Curr_Year: Number(values.Curr_Year),
-                Curr_Sem: Number(values.Curr_Sem),
-                Curr_Units: Number(values.Curr_Units),
-                Curr_LEC_Hrs: Number(values.Curr_LEC_Hrs),
-                Curr_LAB_Hrs: Number(values.Curr_LAB_Hrs),
-                Curr_Status: 1,
-                Curr_CRS_CustomField1: null,
-                Curr_CRS_CustomField2: null,
-                Curr_CRS_CustomField3: null,
+                program_code: selectedProgramCode,
+                curr_rev_code: values.Curr_Rev_Code,
+                curr_course_code: values.Curr_Course_Code,
+                curr_course_desc: values.Curr_Course_Desc,
+                curr_year: Number(values.Curr_Year),
+                curr_sem: Number(values.Curr_Sem),
+                curr_units: Number(values.Curr_Units),
+                curr_lec_hrs: Number(values.Curr_LEC_Hrs),
+                curr_lab_hrs: Number(values.Curr_LAB_Hrs),
+                curr_status: 1,
+                curr_crs_customfield1: null,
+                curr_crs_customfield2: null,
+                curr_crs_customfield3: null,
               },
               { withCredentials: true }
             )
@@ -189,26 +305,25 @@ export default function Curriculum() {
             .post(
               "http://localhost:3000/api/system/curriculum-courses-file-master/create",
               {
-                Program_Code: selectedProgramCode,
-                Curr_Rev_Code: values.Curr_Rev_Code,
-                Curr_Course_Code: values.Curr_Course_Code,
-                Curr_Course_Desc: values.Curr_Course_Desc,
-                Curr_Year: Number(values.Curr_Year),
-                Curr_Sem: Number(values.Curr_Sem),
-                Curr_Units: Number(values.Curr_Units),
-                Curr_LEC_Hrs: Number(values.Curr_LEC_Hrs),
-                Curr_LAB_Hrs: Number(values.Curr_LAB_Hrs),
-                Curr_Status: 1,
-                Curr_CRS_CustomField1: null,
-                Curr_CRS_CustomField2: null,
-                Curr_CRS_CustomField3: null,
+                program_code: selectedProgramCode,
+                curr_rev_code: values.Curr_Rev_Code,
+                curr_course_code: values.Curr_Course_Code,
+                curr_course_desc: values.Curr_Course_Desc,
+                curr_year: Number(values.Curr_Year),
+                curr_sem: Number(values.Curr_Sem),
+                curr_units: Number(values.Curr_Units),
+                curr_lec_hrs: Number(values.Curr_LEC_Hrs),
+                curr_lab_hrs: Number(values.Curr_LAB_Hrs),
+                curr_status: 1,
+                curr_crs_customField1: null,
+                curr_crs_customField2: null,
+                curr_crs_customField3: null,
               },
               { withCredentials: true }
             )
             .then((response) => {
-              const newData = response.data;
-              setAllData(newData);
-              setFilteredData(newData);
+              console.log(response);
+              getTableData(selectedProgramCode);
               setIsEditModalVisible(false);
               form.resetFields();
             })
@@ -243,19 +358,24 @@ export default function Curriculum() {
 
   const columns = [
     {
+      title: "ID",
+      dataIndex: "record_id",
+      key: "record_id",
+    },
+    {
       title: "Program",
       dataIndex: "program",
       key: "program",
     },
     {
       title: "Course Code",
-      dataIndex: "courseCode",
-      key: "courseCode",
+      dataIndex: "course_code",
+      key: "course_code",
     },
     {
       title: "Descriptive Title",
-      dataIndex: "descriptiveTitle",
-      key: "descriptiveTitle",
+      dataIndex: "descriptive_title",
+      key: "descriptive_title",
     },
     {
       title: "Year",
@@ -274,13 +394,13 @@ export default function Curriculum() {
     },
     {
       title: "Rev Code",
-      dataIndex: "revCode",
-      key: "revCode",
+      dataIndex: "rev_code",
+      key: "rev_code",
     },
     {
       title: "Effective Year",
-      dataIndex: "effectiveYear",
-      key: "effectiveYear",
+      dataIndex: "effective_year",
+      key: "effective_year",
     },
     {
       title: "",
@@ -366,7 +486,7 @@ export default function Curriculum() {
             ) : (
               <Table
                 columns={columns}
-                dataSource={filteredData}
+                dataSource={tableData}
                 bordered
                 pagination={{ pageSize: 10 }}
                 responsive={true}
@@ -421,18 +541,6 @@ export default function Curriculum() {
             </Col>
 
             <Col xs={24} sm={8} md={8}>
-              <Form.Item
-                label="Effective Year"
-                name="effectiveYear"
-                rules={[
-                  { required: true, message: "Please enter effective year" },
-                ]}
-              >
-                <Input placeholder="Enter Effective Year" />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={8} md={8}>
               {/* Revision Code Field */}
               <Form.Item
                 label="Revision Code"
@@ -448,7 +556,7 @@ export default function Curriculum() {
                       value={revCode.Curr_Rev_Code}
                     >
                       {revCode.Curr_Rev_Code} - {revCode.Curr_Status} (
-                      {revCode.Curr_Year})
+                      {revCode.Program_Code}- {revCode.Curr_Year})
                     </Option>
                   ))}
                 </Select>
