@@ -42,7 +42,7 @@ export default function Curriculum() {
   const [programTitles, setProgramTitles] = useState([]);
   const [selectedProgramTitle, setSelectedProgramTitle] = useState(null); // Track selected program title for filtering
   const [selectedProgramCode, setSelectedProgramCode] = useState(null);
-
+  const [departmentCode, setDepartmentCode] = useState(null);
   const [tableData, setTableData] = useState([]);
 
   // Fetch program data from API
@@ -81,8 +81,7 @@ export default function Curriculum() {
     const extractedUserObject = localStorage.getItem("user");
     const parsedObject = JSON.parse(extractedUserObject);
 
-    const departmentCode = parsedObject.Department_Code;
-
+    setDepartmentCode(parsedObject.Department_Code);
     axios
       .post(
         "http://localhost:3000/api/system/programs-master/read",
@@ -107,7 +106,9 @@ export default function Curriculum() {
   }, []);
 
   useEffect(() => {
-    if (selectedProgramTitle) {
+    if (selectedProgramTitle === null) {
+      setRevisionCodeData([]);
+    } else if (selectedProgramTitle) {
       setLoading(true); // Start loading before the API call
 
       const findProgramByTitle = (title) => {
@@ -118,14 +119,14 @@ export default function Curriculum() {
 
       const programCode = findProgramByTitle(selectedProgramTitle);
       if (programCode.length > 0) {
-        console.log(programCode[0].Program_Code); // Get first index
-
         setSelectedProgramCode(programCode[0].Program_Code);
-
         axios
           .post(
             "http://localhost:3000/api/system/curriculum-master/read", // Update with the correct endpoint
-            { program_code: programCode[0].Program_Code }, // Pass selected program code
+            {
+              program_code: programCode[0].Program_Code,
+              dept_code: departmentCode,
+            }, // Pass selected program code
             { withCredentials: true }
           )
           .then((response) => {
@@ -144,7 +145,40 @@ export default function Curriculum() {
   }, [selectedProgramTitle, filteredData]);
 
   useEffect(() => {
-    if (selectedProgramTitle) {
+    if (selectedProgramTitle === null) {
+      setLoading(true);
+      axios
+        .post(
+          "http://localhost:3000/api/system/curriculum-courses-file-master/read", // Update with the correct endpoint
+          {
+            program_code: null,
+            dept_code: departmentCode,
+          }, // Pass null for program code to get data for all programs
+          { withCredentials: true }
+        )
+        .then((response) => {
+          const data = response.data;
+
+          const filteredTableData = data.map((item) => ({
+            record_id: item.Record_ID,
+            program: item.Program_Code,
+            course_code: item.Curr_Course_Code,
+            descriptive_title: item.Curr_Course_Desc,
+            year: item.Curr_Year,
+            semester: item.Curr_Sem,
+            units: item.Curr_Units,
+            rev_code: item.Curr_Rev_Code,
+            effective_year: item.Effective_Year,
+          }));
+
+          setTableData(filteredTableData);
+          setLoading(false); // Stop loading once data is received
+        })
+        .catch((error) => {
+          console.error("Error table data:", error);
+          setLoading(false);
+        });
+    } else if (selectedProgramTitle) {
       setLoading(true); // Start loading before the API call
 
       const findProgramByTitle = (title) => {
@@ -155,14 +189,15 @@ export default function Curriculum() {
 
       const programCode = findProgramByTitle(selectedProgramTitle);
       if (programCode.length > 0) {
-        console.log(programCode[0].Program_Code); // get first index
-
         setSelectedProgramCode(programCode[0].Program_Code);
 
         axios
           .post(
             "http://localhost:3000/api/system/curriculum-courses-file-master/read", // Update with the correct endpoint
-            { program_code: programCode[0].Program_Code }, // Pass selected program title or code
+            {
+              program_code: programCode[0].Program_Code,
+              dept_code: departmentCode,
+            }, // Pass selected program title or code
             { withCredentials: true }
           )
           .then((response) => {
@@ -197,14 +232,17 @@ export default function Curriculum() {
   // Handle program title filter change
   function handleFilterChange(value) {
     setSelectedProgramTitle(value);
-    if (value) {
-      const filtered = allData.filter((item) => item.Program_Title === value);
-      setFilteredData(filtered);
-    } else {
+    if (value === "All Programs" || value === null) {
+      setSelectedProgramCode(null);
       setFilteredData(allData); // Reset filter
+    } else {
+      const filtered = allData.filter((item) => item.Program_Title === value);
+      setSelectedProgramCode(
+        filtered.length > 0 ? filtered[0].Program_Code : null
+      );
+      setFilteredData(filtered);
     }
   }
-
   // Open Edit Modal
   function handleEditClick(course) {
     setIsEditMode(true);
@@ -226,14 +264,13 @@ export default function Curriculum() {
     setIsEditModalVisible(false);
   }
 
-  // function to fetch table data:
   // Function to get table data
   function getTableData(programCode) {
     setLoading(true);
     axios
       .post(
         "http://localhost:3000/api/system/curriculum-courses-file-master/read",
-        { program_code: programCode },
+        { program_code: programCode, dept_code: departmentCode },
         { withCredentials: true }
       )
       .then((response) => {
@@ -454,6 +491,7 @@ export default function Curriculum() {
                   className="add-curriculum-btn"
                   icon={<PlusCircleOutlined />}
                   onClick={handleAddClick}
+                  disabled={!selectedProgramTitle} // Disable button when "All Programs" is selected
                 >
                   Add Curriculum
                 </Button>
@@ -510,18 +548,10 @@ export default function Curriculum() {
           {/* Program Field Spanning Full Width */}
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={24} md={24}>
-              <Form.Item
-                label="Program"
-                name="program"
-                rules={[{ required: true, message: "Please select a program" }]}
-              >
-                <Select placeholder="Select Program">
-                  {programTitles.map((title) => (
-                    <Option key={title} value={title}>
-                      {title}
-                    </Option>
-                  ))}
-                </Select>
+              <Form.Item label="Program" name="program">
+                <span>
+                  <b>{selectedProgramTitle}</b>
+                </span>
               </Form.Item>
             </Col>
           </Row>
@@ -550,15 +580,18 @@ export default function Curriculum() {
                 ]}
               >
                 <Select placeholder="Select Revision Code" loading={loading}>
-                  {revisionCodeData.map((revCode) => (
-                    <Option
-                      key={revCode.Curr_Rev_Code}
-                      value={revCode.Curr_Rev_Code}
-                    >
-                      {revCode.Curr_Rev_Code} - {revCode.Curr_Status} (
-                      {revCode.Program_Code}- {revCode.Curr_Year})
-                    </Option>
-                  ))}
+                  {revisionCodeData.map((revCode) => {
+                    console.log(revCode);
+                    return (
+                      <Option
+                        key={revCode.Curr_Rev_Code}
+                        value={revCode.Curr_Rev_Code}
+                      >
+                        {revCode.Curr_Rev_Code} - {revCode.Curr_Status} (
+                        {revCode.Program_Code}- {revCode.Curr_Year})
+                      </Option>
+                    );
+                  })}
                 </Select>
               </Form.Item>
             </Col>

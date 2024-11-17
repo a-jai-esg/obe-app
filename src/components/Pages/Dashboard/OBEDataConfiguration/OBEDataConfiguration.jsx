@@ -39,22 +39,60 @@ export default function Curriculum() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentRecord, setCurrentRecord] = useState(null);
-  const [currentType, setCurrentType] = useState(''); // 'PEO' or 'PILO'
+  const [currentType, setCurrentType] = useState(""); // 'PEO' or 'PILO'
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [groupedData, setGroupedData] = useState([{ id: Date.now(), value: "" }]);  
+  const [groupedData, setGroupedData] = useState([
+    { id: Date.now(), value: "" },
+  ]);
 
   // Data arrays for PEO and PILO
   // Modified data structure for PEO and PILO
   const PEOData = [
-    { key: "1", program: "BSIT", objectives: ["Apply IT skills.", "Pursue lifelong learning."] },
-    { key: "2", program: "BSIS", objectives: ["Develop information systems.", "Lead IT-driven business transformation."] },
-    { key: "3", program: "BSSE", objectives: ["Design and develop software systems.", "Solve real-world software engineering challenges."] },
+    {
+      key: "1",
+      program: "BSIT",
+      objectives: ["Apply IT skills.", "Pursue lifelong learning."],
+    },
+    {
+      key: "2",
+      program: "BSIS",
+      objectives: [
+        "Develop information systems.",
+        "Lead IT-driven business transformation.",
+      ],
+    },
+    {
+      key: "3",
+      program: "BSSE",
+      objectives: [
+        "Design and develop software systems.",
+        "Solve real-world software engineering challenges.",
+      ],
+    },
   ];
-  
+
   const PILOData = [
-    { key: "1", program: "BSIT", outcomes: ["Effective communication.", "Problem-solving in IT."] },
-    { key: "2", program: "BSIS", outcomes: ["Analyze business requirements.", "Design IT solutions for business."] },
-    { key: "3", program: "BSSE", outcomes: ["Implement software development methodologies.", "Work in a team to develop software."] },
+    {
+      key: "1",
+      program: "BSIT",
+      outcomes: ["Effective communication.", "Problem-solving in IT."],
+    },
+    {
+      key: "2",
+      program: "BSIS",
+      outcomes: [
+        "Analyze business requirements.",
+        "Design IT solutions for business.",
+      ],
+    },
+    {
+      key: "3",
+      program: "BSSE",
+      outcomes: [
+        "Implement software development methodologies.",
+        "Work in a team to develop software.",
+      ],
+    },
   ];
 
   const [filteredPEOData, setFilteredPEOData] = useState(PEOData);
@@ -63,9 +101,9 @@ export default function Curriculum() {
   const PEOColumns = [
     { title: "Program", dataIndex: "program", key: "program" },
     {
-      title: 'Program Educational Objectives',
-      dataIndex: 'objectives',
-      key: 'objectives',
+      title: "Program Educational Objectives",
+      dataIndex: "objectives",
+      key: "objectives",
       render: (objectives) => (
         <ul>
           {objectives.map((objective, index) => (
@@ -81,14 +119,17 @@ export default function Curriculum() {
         <Dropdown
           overlay={
             <Menu>
-              <Menu.Item 
-              key="edit" 
-              icon={<EditOutlined />} 
-              onClick={() => handleEditClick(record, 'PEO')}>
+              <Menu.Item
+                key="edit"
+                icon={<EditOutlined />}
+                onClick={() => handleEditClick(record, "PEO")}
+              >
                 Edit
               </Menu.Item>
-              <Menu.Item key="delete" icon={<DeleteOutlined />} 
-                onClick={() => handleDeleteClick(record)} 
+              <Menu.Item
+                key="delete"
+                icon={<DeleteOutlined />}
+                onClick={() => handleDeleteClick(record)}
                 danger
               >
                 Delete
@@ -97,7 +138,9 @@ export default function Curriculum() {
           }
           trigger={["click"]}
         >
-          <Button>Actions <DownOutlined /></Button>
+          <Button>
+            Actions <DownOutlined />
+          </Button>
         </Dropdown>
       ),
     },
@@ -106,9 +149,9 @@ export default function Curriculum() {
   const PILOColumns = [
     { title: "Program", dataIndex: "program", key: "program" },
     {
-      title: 'Program Intented Learning Outcomes',
-      dataIndex: 'outcomes',
-      key: 'outcomes',
+      title: "Program Intented Learning Outcomes",
+      dataIndex: "outcomes",
+      key: "outcomes",
       render: (outcomes) => (
         <ul>
           {outcomes.map((outcome, index) => (
@@ -124,17 +167,18 @@ export default function Curriculum() {
         <Dropdown
           overlay={
             <Menu>
-              <Menu.Item 
-              key="edit" 
-              icon={<EditOutlined />} 
-              onClick={() => handleEditClick(record, 'PILO')}>
+              <Menu.Item
+                key="edit"
+                icon={<EditOutlined />}
+                onClick={() => handleEditClick(record, "PILO")}
+              >
                 Edit
               </Menu.Item>
-              <Menu.Item 
-              key="delete" 
-              icon={<DeleteOutlined />} 
-              onClick={() => handleDeleteClick(record)} 
-              danger
+              <Menu.Item
+                key="delete"
+                icon={<DeleteOutlined />}
+                onClick={() => handleDeleteClick(record)}
+                danger
               >
                 Delete
               </Menu.Item>
@@ -142,7 +186,9 @@ export default function Curriculum() {
           }
           trigger={["click"]}
         >
-          <Button>Actions <DownOutlined /></Button>
+          <Button>
+            Actions <DownOutlined />
+          </Button>
         </Dropdown>
       ),
     },
@@ -160,21 +206,24 @@ export default function Curriculum() {
     setIsEditMode(true);
     setCurrentRecord(record);
     form.setFieldsValue(record);
-  
-    if (type === 'PEO') {
-      setGroupedData(record.objectives.map((objective) => ({
-        id: Date.now() + Math.random(), // Unique ID for each objective
-        value: objective,
-      })));
+
+    if (type === "PEO") {
+      setGroupedData(
+        record.objectives.map((objective) => ({
+          id: Date.now() + Math.random(), // Unique ID for each objective
+          value: objective,
+        }))
+      );
     } else {
-      setGroupedData(record.outcomes.map((outcome) => ({
-        id: Date.now() + Math.random(), // Unique ID for each outcome
-        value: outcome,
-      })));
+      setGroupedData(
+        record.outcomes.map((outcome) => ({
+          id: Date.now() + Math.random(), // Unique ID for each outcome
+          value: outcome,
+        }))
+      );
     }
     setIsModalVisible(true);
   }
-  
 
   function handleAddClick(type) {
     setCurrentType(type);
@@ -187,7 +236,7 @@ export default function Curriculum() {
     form.resetFields();
     setIsModalVisible(false);
     setIsEditMode(false);
-    setGroupedData([{ id: Date.now(), value: "" }]); 
+    setGroupedData([{ id: Date.now(), value: "" }]);
   }
 
   function handleDeleteClick(record) {
@@ -199,22 +248,25 @@ export default function Curriculum() {
     // Logic for deleting the record
     console.log(`Deleted record:`, currentRecord);
     // Remove the record from the data array based on currentType (PEO or PILO)
-    if (currentType === 'PEO') {
-      setFilteredPEOData(filteredPEOData.filter(item => item.key !== currentRecord.key));
+    if (currentType === "PEO") {
+      setFilteredPEOData(
+        filteredPEOData.filter((item) => item.key !== currentRecord.key)
+      );
     } else {
-      setFilteredPILOData(filteredPILOData.filter(item => item.key !== currentRecord.key));
+      setFilteredPILOData(
+        filteredPILOData.filter((item) => item.key !== currentRecord.key)
+      );
     }
     setCurrentRecord(null);
-    form.resetFields()
+    form.resetFields();
     setIsDeleteModalVisible(false);
   }
 
   function handleDeleteCancel() {
-    form.resetFields()
+    form.resetFields();
     setCurrentRecord(null);
     setIsDeleteModalVisible(false);
   }
-  
 
   function handleSaveChanges() {
     form
@@ -222,27 +274,43 @@ export default function Curriculum() {
       .then((values) => {
         if (isEditMode) {
           console.log(`Editing ${currentType}`, values);
-          if (currentType === 'PEO') {
+          if (currentType === "PEO") {
             // Update PEO data
-            const updatedData = filteredPEOData.map(item =>
-              item.key === currentRecord.key ? { ...item, objectives: groupedData.map(field => field.value) } : item
+            const updatedData = filteredPEOData.map((item) =>
+              item.key === currentRecord.key
+                ? {
+                    ...item,
+                    objectives: groupedData.map((field) => field.value),
+                  }
+                : item
             );
             setFilteredPEOData(updatedData);
           } else {
             // Update PILO data
-            const updatedData = filteredPILOData.map(item =>
-              item.key === currentRecord.key ? { ...item, outcomes: groupedData.map(field => field.value) } : item
+            const updatedData = filteredPILOData.map((item) =>
+              item.key === currentRecord.key
+                ? { ...item, outcomes: groupedData.map((field) => field.value) }
+                : item
             );
             setFilteredPILOData(updatedData);
           }
         } else {
           console.log(`Adding new ${currentType}`, values);
-          if (currentType === 'PEO') {
+          if (currentType === "PEO") {
             // Add new PEO data
-            setFilteredPEOData([...filteredPEOData, { ...values, objectives: groupedData.map(field => field.value) }]);
+            setFilteredPEOData([
+              ...filteredPEOData,
+              {
+                ...values,
+                objectives: groupedData.map((field) => field.value),
+              },
+            ]);
           } else {
             // Add new PILO data
-            setFilteredPILOData([...filteredPILOData, { ...values, outcomes: groupedData.map(field => field.value) }]);
+            setFilteredPILOData([
+              ...filteredPILOData,
+              { ...values, outcomes: groupedData.map((field) => field.value) },
+            ]);
           }
         }
         form.resetFields();
@@ -254,8 +322,12 @@ export default function Curriculum() {
   }
 
   function handleProgramFilterChange(value) {
-    setFilteredPEOData(PEOData.filter(course => course.program === value || value === 'all'));
-    setFilteredPILOData(PILOData.filter(course => course.program === value || value === 'all'));
+    setFilteredPEOData(
+      PEOData.filter((course) => course.program === value || value === "all")
+    );
+    setFilteredPILOData(
+      PILOData.filter((course) => course.program === value || value === "all")
+    );
   }
 
   function handleGroupedData(value, id) {
@@ -286,36 +358,57 @@ export default function Curriculum() {
       <Layout>
         <Content>
           <div className="dashboard-content">
-            <Row justify="space-between" align="middle" style={{ marginBottom: 20 }}>
+            <Row
+              justify="space-between"
+              align="middle"
+              style={{ marginBottom: 20 }}
+            >
               <Col>
                 <h2 className="dashboard-header">OBE DATA CONFIGURATION</h2>
               </Col>
               <Col>
-                <Dropdown overlay={
-                  <Menu>
-                    <Menu.Item key="addPO" onClick={() => handleAddClick('PEO')}>Add PEO</Menu.Item>
-                    <Menu.Item key="addPILO" onClick={() => handleAddClick('PILO')}>Add PO/PILO</Menu.Item>
-                    <Menu.Item 
-                    key="map" 
-                    onClick={() => navigate('/peo-pilo-mapping')}
-                    >
-                     Map POs/PILOs to PEO
-                    </Menu.Item>
-                  </Menu>
-                } trigger={["click"]}>
-                  <Button type="primary" icon={<PlusCircleOutlined />}>Add <DownOutlined /></Button>
+                <Dropdown
+                  overlay={
+                    <Menu>
+                      <Menu.Item
+                        key="addPO"
+                        onClick={() => handleAddClick("PEO")}
+                      >
+                        Add PEO
+                      </Menu.Item>
+                      <Menu.Item
+                        key="addPILO"
+                        onClick={() => handleAddClick("PILO")}
+                      >
+                        Add PO/PILO
+                      </Menu.Item>
+                      <Menu.Item
+                        key="map"
+                        onClick={() => navigate("/peo-pilo-mapping")}
+                      >
+                        Map POs/PILOs to PEO
+                      </Menu.Item>
+                    </Menu>
+                  }
+                  trigger={["click"]}
+                >
+                  <Button type="primary" icon={<PlusCircleOutlined />}>
+                    Add <DownOutlined />
+                  </Button>
                 </Dropdown>
               </Col>
             </Row>
 
             <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
               <Col>
-              <span style={{ marginRight: 8 }}><strong>Filter by: </strong></span>
+                <span style={{ marginRight: 8 }}>
+                  <strong>Filter by: </strong>
+                </span>
               </Col>
               <Col xs={24} sm={12} md={8}>
                 <Select
                   defaultValue="all"
-                  style={{ width: '100%' }}
+                  style={{ width: "100%" }}
                   onChange={handleProgramFilterChange}
                 >
                   <Option value="all">All Programs</Option>
@@ -334,34 +427,36 @@ export default function Curriculum() {
               <Tabs defaultActiveKey="PEO">
                 <TabPane tab="Program Educational Objectives" key="PEO">
                   <div className="table-shadow-wrapper">
-                  <Table 
-                    columns={PEOColumns} 
-                    dataSource={filteredPEOData} 
-                    bordered 
-                    pagination={{ pageSize: 10 }} 
-                    responsive={true}
+                    <Table
+                      columns={PEOColumns}
+                      dataSource={filteredPEOData}
+                      bordered
+                      pagination={{ pageSize: 10 }}
+                      responsive={true}
                     />
                   </div>
                 </TabPane>
                 <TabPane tab="Program Outcomes" key="PILO">
-                <div className="table-shadow-wrapper">
-                    <Table 
-                  columns={PILOColumns} 
-                  dataSource={filteredPILOData} 
-                  bordered 
-                  pagination={{ pageSize: 10 }} 
-                  responsive={true}
+                  <div className="table-shadow-wrapper">
+                    <Table
+                      columns={PILOColumns}
+                      dataSource={filteredPILOData}
+                      bordered
+                      pagination={{ pageSize: 10 }}
+                      responsive={true}
                     />
-                </div>
+                  </div>
                 </TabPane>
               </Tabs>
             )}
 
             <Modal
-              title={
-                `${isEditMode ? "Edit" : "Add"} 
-                ${currentType === 'PEO' ? 'Program Educational Objective' : 
-                'Program Outcome/Program Intended Learning Outcome'}
+              title={`${isEditMode ? "Edit" : "Add"} 
+                ${
+                  currentType === "PEO"
+                    ? "Program Educational Objective"
+                    : "Program Outcome/Program Intended Learning Outcome"
+                }
              `}
               visible={isModalVisible}
               onCancel={handleModalCancel}
@@ -371,20 +466,22 @@ export default function Curriculum() {
               maskClosable={false}
             >
               <Form form={form} layout="vertical">
-              <Row gutter={[16, 16]}>
-                <Col xs={24}>
-                <Form.Item
-                    label="Program"
-                    name="program"
-                    rules={[{ required: true, message: "Please select a program" }]}
+                <Row gutter={[16, 16]}>
+                  <Col xs={24}>
+                    <Form.Item
+                      label="Program"
+                      name="program"
+                      rules={[
+                        { required: true, message: "Please select a program" },
+                      ]}
                     >
-                    <Select placeholder="Select Program">
+                      <Select placeholder="Select Program">
                         <Option value="BSIT">BSIT</Option>
                         <Option value="BSIS">BSIS</Option>
                         <Option value="BSSE">BSSE</Option>
-                    </Select>
+                      </Select>
                     </Form.Item>
-                </Col>
+                  </Col>
                 </Row>
                 {currentType !== "PILO" ? (
                   <>
@@ -393,21 +490,28 @@ export default function Curriculum() {
                         <Form.Item
                           label="Program Educational Objectives"
                           name="objectives"
-                          rules={[{ required: true, message: "Please add at least one objective" }]}
+                          rules={[
+                            {
+                              required: true,
+                              message: "Please add at least one objective",
+                            },
+                          ]}
                         >
                           {groupedData.map((field, index) => (
                             <Row key={field.id} gutter={[16, 8]}>
                               <Col xs={24} md={20}>
                                 <Input
-                                  style={{marginBottom:"15px"}}
+                                  style={{ marginBottom: "15px" }}
                                   placeholder="Enter Objective"
                                   value={field.value}
-                                  onChange={(e) => handleGroupedData(e.target.value, field.id)}
+                                  onChange={(e) =>
+                                    handleGroupedData(e.target.value, field.id)
+                                  }
                                 />
                               </Col>
                               <Col xs={24} md={4}>
                                 <Button
-                                  style={{marginBottom:"15px"}}
+                                  style={{ marginBottom: "15px" }}
                                   type="text"
                                   icon={<DeleteOutlined />}
                                   danger
@@ -416,18 +520,18 @@ export default function Curriculum() {
                               </Col>
                             </Row>
                           ))}
-                          
+
                           <Row>
                             <Col>
-                            <Button
-                              type="dashed"
-                              icon={<PlusCircleOutlined />}
-                              onClick={handleAdd}
-                              block
-                              style={{ marginTop: 10 }}
-                            >
-                              Add Outcome
-                            </Button>
+                              <Button
+                                type="dashed"
+                                icon={<PlusCircleOutlined />}
+                                onClick={handleAdd}
+                                block
+                                style={{ marginTop: 10 }}
+                              >
+                                Add Outcome
+                              </Button>
                             </Col>
                           </Row>
                         </Form.Item>
@@ -441,21 +545,28 @@ export default function Curriculum() {
                         <Form.Item
                           label="Program Intended Learning Outcomes"
                           name="outcomes"
-                          rules={[{ required: true, message: "Please add at least one outcome" }]}
+                          rules={[
+                            {
+                              required: true,
+                              message: "Please add at least one outcome",
+                            },
+                          ]}
                         >
                           {groupedData.map((field, index) => (
                             <Row key={field.id} gutter={[16, 8]}>
                               <Col xs={24} md={20}>
                                 <Input
-                                  style={{marginBottom:"15px"}}
+                                  style={{ marginBottom: "15px" }}
                                   placeholder="Enter Outcome"
                                   value={field.value}
-                                  onChange={(e) => handleGroupedData(e.target.value, field.id)}
+                                  onChange={(e) =>
+                                    handleGroupedData(e.target.value, field.id)
+                                  }
                                 />
                               </Col>
                               <Col xs={24} md={4}>
                                 <Button
-                                  style={{marginBottom:"15px"}}
+                                  style={{ marginBottom: "15px" }}
                                   type="text"
                                   icon={<DeleteOutlined />}
                                   danger
@@ -464,18 +575,18 @@ export default function Curriculum() {
                               </Col>
                             </Row>
                           ))}
-                          
+
                           <Row>
                             <Col>
-                            <Button
-                              type="dashed"
-                              icon={<PlusCircleOutlined />}
-                              onClick={handleAdd}
-                              block
-                              style={{ marginTop: 10 }}
-                            >
-                              Add Outcome
-                            </Button>
+                              <Button
+                                type="dashed"
+                                icon={<PlusCircleOutlined />}
+                                onClick={handleAdd}
+                                block
+                                style={{ marginTop: 10 }}
+                              >
+                                Add Outcome
+                              </Button>
                             </Col>
                           </Row>
                         </Form.Item>
@@ -488,17 +599,15 @@ export default function Curriculum() {
 
             {/* Delete Confirmation Modal */}
             <Modal
-                title={
-                    `Delete ${currentType === 'PEO' ? 'PEO' : 
-                    'PO/PILO'}
+              title={`Delete ${currentType === "PEO" ? "PEO" : "PO/PILO"}
                  `}
-                visible={isDeleteModalVisible}
-                onOk={handleDeleteConfirm}
-                onCancel={handleDeleteCancel}
-                okButtonProps={{ danger: true }}
-                okText={'Delete'}
+              visible={isDeleteModalVisible}
+              onOk={handleDeleteConfirm}
+              onCancel={handleDeleteCancel}
+              okButtonProps={{ danger: true }}
+              okText={"Delete"}
             >
-                <p> Are you sure you want to delete?</p>
+              <p> Are you sure you want to delete?</p>
             </Modal>
           </div>
         </Content>
