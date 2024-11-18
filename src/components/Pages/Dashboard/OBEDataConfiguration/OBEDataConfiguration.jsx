@@ -39,14 +39,17 @@ export default function Curriculum() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentRecord, setCurrentRecord] = useState(null);
-  const [allData, setAllData] = useState([]);
-  const [programTitles, setProgramTitles] = useState([]);
-  const [programTitleToCodeMap, setProgramTitleToCodeMap] = useState({}); // Mapping of titles to codes
   const [currentType, setCurrentType] = useState(""); // 'PEO' or 'PILO'
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [groupedData, setGroupedData] = useState([
-    { id: Date.now(), value: "" },
-  ]);
+  const [programTitles, setProgramTitles] = useState([]);
+  const [filteredPEOData, setFilteredPEOData] = useState([]);
+  const [filteredPILOData, setFilteredPILOData] = useState([]);
+  const [programData, setProgramData] = useState({
+    objective: "",
+    outcome: "",
+  });
+  const [selectedFilterValue, setSelectedFilterValue] = useState("all");
+  const [selectedProgramCode, setSelectedProgramCode] = useState(null);
+  const [allData, setAllData] = useState([]); // Store all program data
 
   // Fetch the programs list
   useEffect(() => {
@@ -63,43 +66,158 @@ export default function Curriculum() {
         );
 
         const data = response.data;
-        setAllData(data);
+        setAllData(data); // Store all program data
+        setProgramData(data);
+        const titles = Array.from(
+          new Set(data.map((item) => item.Program_Title))
+        );
+        setProgramTitles(titles);
 
-        // Create a mapping of program titles to program codes
-        const titleToCodeMap = data.reduce((map, program) => {
-          map[program.Program_Title] = program.Program_Code;
-          return map;
-        }, {});
+        setFilteredPEOData(
+          data.map((program) => ({
+            key: program.Program_Title,
+            program: program.Program_Title,
+            objectives: program.PEOs,
+          }))
+        );
 
-        setProgramTitleToCodeMap(titleToCodeMap);
-        setProgramTitles(Object.keys(titleToCodeMap)); // List of program titles
+        setFilteredPILOData(
+          data.map((program) => ({
+            key: program.Program_Title,
+            program: program.Program_Title,
+            outcomes: program.PILOs,
+          }))
+        );
       } catch (error) {
         console.error("Error fetching program data:", error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchInitialData();
   }, []);
 
-  // Data arrays for PEO and PILO based on the fetched data
-  const PEOData = allData.map((program, index) => ({
-    key: index.toString(),
-    program: program.Program_Title,
-    objectives: program.PEOs, // Assuming PEOs are part of the fetched data
-    programCode: program.Program_Code, // Program Code mapped
-  }));
+  // Handle filter change to update selected program
+  const handleFilterChange = (value) => {
+    setSelectedFilterValue(value);
+    if (value === "all" || value === null) {
+      setSelectedProgramCode(null);
+    } else {
+      const filtered = allData.filter((item) => item.Program_Title === value);
+      setSelectedProgramCode(
+        filtered.length > 0 ? filtered[0].Program_Code : null
+      );
+    }
+  };
 
-  const PILOData = allData.map((program, index) => ({
-    key: index.toString(),
-    program: program.Program_Title,
-    outcomes: program.PILOs, // Assuming PILOs are part of the fetched data
-    programCode: program.Program_Code, // Program Code mapped
-  }));
+  const handleSaveChanges = async () => {
+    setLoading(true);
+    const extractedUserObject = localStorage.getItem("user");
+    const parsedObject = JSON.parse(extractedUserObject);
 
-  const [filteredPEOData, setFilteredPEOData] = useState(PEOData);
-  const [filteredPILOData, setFilteredPILOData] = useState(PILOData);
+    try {
+      const programCodeFromFilter = selectedProgramCode || selectedFilterValue; // Use selectedProgramCode if available
+
+      let payload;
+      if (currentType === "PEO") {
+        payload = {
+          program_code: currentRecord
+            ? currentRecord.program_code
+            : programCodeFromFilter,
+          peo_desc: programData.objective, // For PEO, use objective
+          peo_status: 1,
+          peo_custom_field1: null,
+          peo_custom_field2: null,
+          peo_custom_field3: null,
+        };
+      } else if (currentType === "PILO") {
+        payload = {
+          program_code: currentRecord
+            ? currentRecord.program_code
+            : programCodeFromFilter,
+          po_desc: programData.outcome, // For PILO, use outcome
+          po_status: 1,
+          po_custom_field1: null,
+          po_custom_field2: null,
+          po_custom_field3: null,
+        };
+      }
+
+      let response;
+      if (isEditMode) {
+        if (currentType === "PEO") {
+          response = await axios.put(
+            `http://localhost:3000/api/system/peo-master/update/${currentRecord.peo_seq_number}`,
+            payload,
+            { withCredentials: true }
+          );
+        } else if (currentType === "PILO") {
+          response = await axios.put(
+            `http://localhost:3000/api/system/pilo-master/update/${currentRecord.pilo_seq_number}`,
+            payload,
+            { withCredentials: true }
+          );
+        }
+      } else {
+        if (currentType === "PEO") {
+          response = await axios.post(
+            "http://localhost:3000/api/system/peo-master/create",
+            payload,
+            { withCredentials: true }
+          );
+        } else if (currentType === "PILO") {
+          response = await axios.post(
+            "http://localhost:3000/api/system/pilo-master/create",
+            payload,
+            { withCredentials: true }
+          );
+        }
+      }
+
+      if (response.status === 201 || response.status === 200) {
+        setIsModalVisible(false);
+        fetchInitialData();
+      }
+    } catch (error) {
+      console.error("Error saving changes:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleModalCancel = () => {
+    setIsModalVisible(false);
+  };
+
+  const handleAddClick = (type) => {
+    setCurrentType(type);
+    setIsModalVisible(true);
+    setIsEditMode(false);
+    setProgramData({
+      objective: "", // reset objective or outcome
+      outcome: "",
+    });
+  };
+
+  const handleEditClick = (record, type) => {
+    setCurrentType(type);
+    setIsModalVisible(true);
+    setIsEditMode(true);
+    setCurrentRecord(record);
+    if (type === "PEO") {
+      setProgramData({ objective: record.objectives });
+    } else {
+      setProgramData({ outcome: record.outcomes });
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setProgramData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
 
   const PEOColumns = [
     { title: "Program", dataIndex: "program", key: "program" },
@@ -107,13 +225,8 @@ export default function Curriculum() {
       title: "Program Educational Objectives",
       dataIndex: "objectives",
       key: "objectives",
-      render: (objectives) => (
-        <ul>
-          {objectives.map((objective, index) => (
-            <li key={index}>{objective}</li>
-          ))}
-        </ul>
-      ),
+      render: (objectives) =>
+        objectives ? <span>{objectives}</span> : "No Objectives Available",
     },
     {
       title: "Actions",
@@ -155,13 +268,8 @@ export default function Curriculum() {
       title: "Program Intended Learning Outcomes",
       dataIndex: "outcomes",
       key: "outcomes",
-      render: (outcomes) => (
-        <ul>
-          {outcomes.map((outcome, index) => (
-            <li key={index}>{outcome}</li>
-          ))}
-        </ul>
-      ),
+      render: (outcomes) =>
+        outcomes ? <span>{outcomes}</span> : "No Outcomes Available",
     },
     {
       title: "Actions",
@@ -197,270 +305,508 @@ export default function Curriculum() {
     },
   ];
 
-  function handleEditClick(record, type) {
+  return (
+    <Layout>
+      <Sidebar />
+      <Content style={{ padding: "0 50px" }}>
+        <Row gutter={[16, 16]} style={{ marginBottom: "20px" }}>
+          <Col span={24}>
+            <Select
+              defaultValue="all"
+              style={{ width: "100%" }}
+              onChange={handleFilterChange}
+            >
+              <Option value="all">All Programs</Option>
+              {programTitles.map((title) => (
+                <Option key={title} value={title}>
+                  {title}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+        </Row>
+
+        <Row gutter={[16, 16]}>
+          <Col span={24}>
+            <Tabs
+              defaultActiveKey="PEO"
+              onChange={(key) => setCurrentType(key)}
+            >
+              <TabPane tab="Program Educational Objectives" key="PEO">
+                <Button
+                  icon={<PlusCircleOutlined />}
+                  onClick={() => handleAddClick("PEO")}
+                  disabled={selectedFilterValue === "all"}
+                >
+                  Add PEO
+                </Button>
+                <Table
+                  columns={PEOColumns}
+                  dataSource={filteredPEOData}
+                  loading={loading}
+                />
+              </TabPane>
+
+              <TabPane tab="Program Intended Learning Outcomes" key="PILO">
+                <Button
+                  icon={<PlusCircleOutlined />}
+                  onClick={() => handleAddClick("PILO")}
+                  disabled={selectedFilterValue === "all"}
+                >
+                  Add PILO
+                </Button>
+                <Table
+                  columns={PILOColumns}
+                  dataSource={filteredPILOData}
+                  loading={loading}
+                />
+              </TabPane>
+            </Tabs>
+          </Col>
+        </Row>
+
+        <Modal
+          title={isEditMode ? "Edit Record" : `Add ${currentType}`}
+          visible={isModalVisible}
+          onCancel={handleModalCancel}
+          onOk={handleSaveChanges}
+        >
+          <Form form={form}>
+            {currentType === "PEO" && (
+              <Form.Item label="Program Educational Objective">
+                <Input
+                  name="objective"
+                  value={programData.objective}
+                  onChange={handleChange}
+                />
+              </Form.Item>
+            )}
+            {currentType === "PILO" && (
+              <Form.Item label="Program Intended Learning Outcome">
+                <Input
+                  name="outcome"
+                  value={programData.outcome}
+                  onChange={handleChange}
+                />
+              </Form.Item>
+            )}
+          </Form>
+        </Modal>
+      </Content>
+    </Layout>
+  );
+}
+
+/*
+import React, { useState, useEffect } from "react";
+import {
+  PlusCircleOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  DownOutlined,
+} from "@ant-design/icons";
+import {
+  Layout,
+  Table,
+  Select,
+  Button,
+  Row,
+  Col,
+  Spin,
+  Menu,
+  Dropdown,
+  Modal,
+  Form,
+  Input,
+  Tabs,
+} from "antd";
+import Sidebar from "../../../Global/Sidebar";
+import "../Curriculum/Curriculum.css";
+import "./OBEDataConfiguration.css";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const { Content } = Layout;
+const { Option } = Select;
+const { TabPane } = Tabs;
+
+export default function Curriculum() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [form] = Form.useForm();
+
+  // States for handling modals
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentRecord, setCurrentRecord] = useState(null);
+  const [currentType, setCurrentType] = useState(""); // 'PEO' or 'PILO'
+  const [programTitles, setProgramTitles] = useState([]);
+  const [filteredPEOData, setFilteredPEOData] = useState([]);
+  const [filteredPILOData, setFilteredPILOData] = useState([]);
+  const [programData, setProgramData] = useState({
+    objective: "",
+    outcome: "",
+  });
+  const [selectedFilterValue, setSelectedFilterValue] = useState("all");
+
+  // Fetch the programs list
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      setLoading(true);
+      try {
+        const extractedUserObject = localStorage.getItem("user");
+        const parsedObject = JSON.parse(extractedUserObject);
+
+        const response = await axios.post(
+          "http://localhost:3000/api/system/programs-master/read",
+          { dept_code: parsedObject.Department_Code },
+          { withCredentials: true }
+        );
+
+        const data = response.data;
+        setProgramData(data);
+        const titles = Array.from(
+          new Set(data.map((item) => item.Program_Title))
+        );
+        setProgramTitles(titles);
+
+        setFilteredPEOData(
+          data.map((program) => ({
+            key: program.Program_Title,
+            program: program.Program_Title,
+            objectives: program.PEOs,
+          }))
+        );
+
+        setFilteredPILOData(
+          data.map((program) => ({
+            key: program.Program_Title,
+            program: program.Program_Title,
+            outcomes: program.PILOs,
+          }))
+        );
+      } catch (error) {
+        console.error("Error fetching program data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInitialData();
+  }, []);
+
+  const handleSaveChanges = async () => {
+    setLoading(true);
+    const extractedUserObject = localStorage.getItem("user");
+    const parsedObject = JSON.parse(extractedUserObject);
+
+    try {
+      const programCodeFromFilter = selectedFilterValue; // Use selectedFilterValue
+
+      let payload;
+      if (currentType === "PEO") {
+        payload = {
+          program_code: currentRecord
+            ? currentRecord.program_code
+            : programCodeFromFilter,
+          peo_desc: programData.objective, // For PEO, use objective
+          peo_status: "active",
+          peo_custom_field1: null,
+          peo_custom_field2: null,
+          peo_custom_field3: null,
+        };
+      } else if (currentType === "PILO") {
+        payload = {
+          program_code: currentRecord
+            ? currentRecord.program_code
+            : programCodeFromFilter,
+          po_desc: programData.outcome, // For PILO, use outcome
+          po_status: "active",
+          po_custom_field1: null,
+          po_custom_field2: null,
+          po_custom_field3: null,
+        };
+      }
+
+      let response;
+      if (isEditMode) {
+        if (currentType === "PEO") {
+          response = await axios.put(
+            `http://localhost:3000/api/system/peo-master/update/${currentRecord.peo_seq_number}`,
+            payload,
+            { withCredentials: true }
+          );
+        } else if (currentType === "PILO") {
+          response = await axios.put(
+            `http://localhost:3000/api/system/pilo-master/update/${currentRecord.pilo_seq_number}`,
+            payload,
+            { withCredentials: true }
+          );
+        }
+      } else {
+        if (currentType === "PEO") {
+          response = await axios.post(
+            "http://localhost:3000/api/system/peo-master/create",
+            payload,
+            { withCredentials: true }
+          );
+        } else if (currentType === "PILO") {
+          response = await axios.post(
+            "http://localhost:3000/api/system/pilo-master/create",
+            payload,
+            { withCredentials: true }
+          );
+        }
+      }
+
+      if (response.status === 201 || response.status === 200) {
+        setIsModalVisible(false);
+        fetchInitialData();
+      }
+    } catch (error) {
+      console.error("Error saving changes:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleModalCancel = () => {
+    setIsModalVisible(false);
+  };
+
+  const handleAddClick = (type) => {
     setCurrentType(type);
+    setIsModalVisible(true);
+    setIsEditMode(false);
+    setProgramData({
+      objective: "", // reset objective or outcome
+      outcome: "",
+    });
+  };
+
+  const handleEditClick = (record, type) => {
+    setCurrentType(type);
+    setIsModalVisible(true);
     setIsEditMode(true);
     setCurrentRecord(record);
-    form.setFieldsValue(record);
-
     if (type === "PEO") {
-      setGroupedData(
-        record.objectives.map((objective) => ({
-          id: Date.now() + Math.random(), // Unique ID for each objective
-          value: objective,
-        }))
-      );
+      setProgramData({ objective: record.objectives });
     } else {
-      setGroupedData(
-        record.outcomes.map((outcome) => ({
-          id: Date.now() + Math.random(), // Unique ID for each outcome
-          value: outcome,
-        }))
-      );
+      setProgramData({ outcome: record.outcomes });
     }
-    setIsModalVisible(true);
-  }
+  };
 
-  function handleAddClick(type) {
-    setCurrentType(type);
-    setIsEditMode(false);
-    form.resetFields();
-    setIsModalVisible(true);
-  }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setProgramData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
 
-  function handleModalCancel() {
-    form.resetFields();
-    setIsModalVisible(false);
-    setIsEditMode(false);
-    setGroupedData([{ id: Date.now(), value: "" }]);
-  }
-
-  function handleDeleteClick(record) {
-    setCurrentRecord(record);
-    setIsDeleteModalVisible(true);
-  }
-
-  function handleDeleteConfirm() {
-    // Logic for deleting the record
-    console.log(`Deleted record:`, currentRecord);
-    // Remove the record from the data array based on currentType (PEO or PILO)
-    if (currentType === "PEO") {
-      setFilteredPEOData(
-        filteredPEOData.filter((item) => item.key !== currentRecord.key)
-      );
-    } else {
-      setFilteredPILOData(
-        filteredPILOData.filter((item) => item.key !== currentRecord.key)
-      );
-    }
-    setCurrentRecord(null);
-    form.resetFields();
-    setIsDeleteModalVisible(false);
-  }
-
-  function handleDeleteCancel() {
-    form.resetFields();
-    setCurrentRecord(null);
-    setIsDeleteModalVisible(false);
-  }
-
-  function handleSaveChanges() {
-    form
-      .validateFields()
-      .then((values) => {
-        if (isEditMode) {
-          console.log(`Editing ${currentType}`, values);
-          if (currentType === "PEO") {
-            // Update PEO data
-            const updatedData = filteredPEOData.map((item) =>
-              item.key === currentRecord.key
-                ? {
-                    ...item,
-                    objectives: groupedData.map((field) => field.value),
-                  }
-                : item
-            );
-            setFilteredPEOData(updatedData);
-          } else {
-            // Update PILO data
-            const updatedData = filteredPILOData.map((item) =>
-              item.key === currentRecord.key
-                ? { ...item, outcomes: groupedData.map((field) => field.value) }
-                : item
-            );
-            setFilteredPILOData(updatedData);
+  const PEOColumns = [
+    { title: "Program", dataIndex: "program", key: "program" },
+    {
+      title: "Program Educational Objectives",
+      dataIndex: "objectives",
+      key: "objectives",
+      render: (objectives) =>
+        objectives ? <span>{objectives}</span> : "No Objectives Available",
+    },
+    {
+      title: "Actions",
+      key: "action",
+      render: (_, record) => (
+        <Dropdown
+          overlay={
+            <Menu>
+              <Menu.Item
+                key="edit"
+                icon={<EditOutlined />}
+                onClick={() => handleEditClick(record, "PEO")}
+              >
+                Edit
+              </Menu.Item>
+              <Menu.Item
+                key="delete"
+                icon={<DeleteOutlined />}
+                onClick={() => handleDeleteClick(record)}
+                danger
+              >
+                Delete
+              </Menu.Item>
+            </Menu>
           }
-        } else {
-          console.log(`Adding new ${currentType}`, values);
-          if (currentType === "PEO") {
-            // Add new PEO data
-            setFilteredPEOData([
-              ...filteredPEOData,
-              {
-                ...values,
-                objectives: groupedData.map((field) => field.value),
-              },
-            ]);
-          } else {
-            // Add new PILO data
-            setFilteredPILOData([
-              ...filteredPILOData,
-              { ...values, outcomes: groupedData.map((field) => field.value) },
-            ]);
+          trigger={["click"]}
+        >
+          <Button>
+            Actions <DownOutlined />
+          </Button>
+        </Dropdown>
+      ),
+    },
+  ];
+
+  const PILOColumns = [
+    { title: "Program", dataIndex: "program", key: "program" },
+    {
+      title: "Program Intended Learning Outcomes",
+      dataIndex: "outcomes",
+      key: "outcomes",
+      render: (outcomes) =>
+        outcomes ? <span>{outcomes}</span> : "No Outcomes Available",
+    },
+    {
+      title: "Actions",
+      key: "action",
+      render: (_, record) => (
+        <Dropdown
+          overlay={
+            <Menu>
+              <Menu.Item
+                key="edit"
+                icon={<EditOutlined />}
+                onClick={() => handleEditClick(record, "PILO")}
+              >
+                Edit
+              </Menu.Item>
+              <Menu.Item
+                key="delete"
+                icon={<DeleteOutlined />}
+                onClick={() => handleDeleteClick(record)}
+                danger
+              >
+                Delete
+              </Menu.Item>
+            </Menu>
           }
-        }
+          trigger={["click"]}
+        >
+          <Button>
+            Actions <DownOutlined />
+          </Button>
+        </Dropdown>
+      ),
+    },
+  ];
 
-        setIsModalVisible(false);
-        form.resetFields();
-      })
-      .catch((error) => {
-        console.log("Validation Failed:", error);
-      });
+  function handleMappingNavigation() {
+    navigate("/peo-pilo-mapping");
   }
-
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sidebar />
       <Layout className="site-layout">
-        <Content style={{ margin: "0 16px" }}>
-          <div
-            className="site-layout-background"
-            style={{ padding: 24, minHeight: 360 }}
-          >
-            <Tabs defaultActiveKey="1">
-              <TabPane tab="PEOs" key="1">
-                <Button
-                  type="primary"
-                  icon={<PlusCircleOutlined />}
-                  onClick={() => handleAddClick("PEO")}
-                  style={{ marginBottom: 16 }}
-                >
-                  Add New PEO
-                </Button>
-                <Table
-                  loading={loading}
-                  dataSource={filteredPEOData}
-                  columns={PEOColumns}
-                  pagination={false}
-                />
-              </TabPane>
-              <TabPane tab="PILOs" key="2">
-                <Button
-                  type="primary"
-                  icon={<PlusCircleOutlined />}
-                  onClick={() => handleAddClick("PILO")}
-                  style={{ marginBottom: 16 }}
-                >
-                  Add New PILO
-                </Button>
-                <Table
-                  loading={loading}
-                  dataSource={filteredPILOData}
-                  columns={PILOColumns}
-                  pagination={false}
-                />
-              </TabPane>
-            </Tabs>
-
-            <Modal
-              title={isEditMode ? "Edit Record" : `Add New ${currentType}`}
-              visible={isModalVisible}
-              onCancel={handleModalCancel}
-              onOk={handleSaveChanges}
-              okText={isEditMode ? "Save Changes" : "Save"}
-            >
-              <Form form={form} layout="vertical">
-                <Form.Item
-                  name="program"
-                  label="Program Title"
-                  rules={[
-                    { required: true, message: "Please select a program" },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Program"
-                    onChange={(value) => handleProgramChange(value)}
-                  >
-                    {programTitles.map((title, index) => (
-                      <Option key={index} value={title}>
-                        {title}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-                <Form.Item
-                  name="groupedData"
-                  label={`Program ${
-                    currentType === "PEO"
-                      ? "Educational Objectives"
-                      : "Intended Learning Outcomes"
-                  }`}
-                  rules={[
-                    {
-                      required: true,
-                      message: `Please provide ${currentType}`,
-                    },
-                  ]}
-                >
-                  <div>
-                    {groupedData.map((field, index) => (
-                      <Row key={field.id}>
-                        <Col span={20}>
-                          <Input
-                            value={field.value}
-                            onChange={(e) => {
-                              const updatedData = [...groupedData];
-                              updatedData[index].value = e.target.value;
-                              setGroupedData(updatedData);
-                            }}
-                            placeholder="Enter Objective/Outcome"
-                          />
-                        </Col>
-                        <Col span={4}>
-                          <Button
-                            type="danger"
-                            onClick={() => {
-                              const updatedData = groupedData.filter(
-                                (f) => f.id !== field.id
-                              );
-                              setGroupedData(updatedData);
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </Col>
-                      </Row>
-                    ))}
-                    <Button
-                      type="dashed"
-                      onClick={() => {
-                        setGroupedData([
-                          ...groupedData,
-                          { id: Date.now(), value: "" },
-                        ]);
-                      }}
-                      style={{ marginTop: 16 }}
+        <Content style={{ margin: "16px" }}>
+          <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
+            <Col>
+              <span style={{ marginRight: 8 }}>
+                <strong>Filter by: </strong>
+              </span>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Select defaultValue="all" style={{ width: 400 }}>
+                <Option value="all">All Programs</Option>
+                {programTitles.map((program) => (
+                  <Option key={program} value={program}>
+                    {program}
+                  </Option>
+                ))}
+              </Select>
+            </Col>
+          </Row>
+          <Row gutter={[16, 16]} justify="end">
+            <Col>
+              <Dropdown
+                overlay={
+                  <Menu>
+                    <Menu.Item
+                      key="addPEO"
+                      icon={<PlusCircleOutlined />}
+                      onClick={() => handleAddClick("PEO")}
                     >
-                      Add Another
-                    </Button>
-                  </div>
-                </Form.Item>
-              </Form>
-            </Modal>
+                      Add PEO
+                    </Menu.Item>
+                    <Menu.Item
+                      key="addPILO"
+                      icon={<PlusCircleOutlined />}
+                      onClick={() => handleAddClick("PILO")}
+                    >
+                      Add PO/PILO
+                    </Menu.Item>
+                    <Menu.Item
+                      key="mapPOtoPEO"
+                      icon={<PlusCircleOutlined />}
+                      onClick={handleMappingNavigation}
+                    >
+                      Map POs/PILOs to PEO
+                    </Menu.Item>
+                  </Menu>
+                }
+                trigger={["click"]}
+              >
+                <Button type="primary" icon={<PlusCircleOutlined />}>
+                  Add <DownOutlined />
+                </Button>
+              </Dropdown>
+            </Col>
+          </Row>
 
-            <Modal
-              title="Confirm Delete"
-              visible={isDeleteModalVisible}
-              onOk={handleDeleteConfirm}
-              onCancel={handleDeleteCancel}
-              okText="Delete"
-              cancelText="Cancel"
-            >
-              <p>Are you sure you want to delete this record?</p>
-            </Modal>
-          </div>
+          <Tabs defaultActiveKey="PEO">
+            <TabPane tab="PEO" key="PEO">
+              <Table
+                dataSource={filteredPEOData}
+                columns={PEOColumns}
+                pagination={{ pageSize: 5 }}
+                loading={loading}
+              />
+            </TabPane>
+            <TabPane tab="PILO" key="PILO">
+              <Table
+                dataSource={filteredPILOData}
+                columns={PILOColumns}
+                pagination={{ pageSize: 5 }}
+                loading={loading}
+              />
+            </TabPane>
+          </Tabs>
+
+          <Modal
+            title={isEditMode ? `Edit ${currentType}` : `Add ${currentType}`}
+            visible={isModalVisible}
+            onCancel={handleModalCancel}
+            footer={null}
+          >
+            <Form form={form} layout="vertical" onFinish={handleSaveChanges}>
+              <Form.Item
+                label={`${currentType} Description`}
+                name="description"
+                rules={[
+                  {
+                    required: true,
+                    message: `${currentType} description is required`,
+                  },
+                ]}
+              >
+                <Input
+                  name={currentType === "PEO" ? "objective" : "outcome"}
+                  value={
+                    programData[currentType === "PEO" ? "objective" : "outcome"]
+                  }
+                  onChange={handleChange}
+                />
+              </Form.Item>
+              <Row justify="space-between">
+                <Button onClick={handleModalCancel}>Cancel</Button>
+                <Button type="primary" htmlType="submit">
+                  Save
+                </Button>
+              </Row>
+            </Form>
+          </Modal>
         </Content>
       </Layout>
     </Layout>
   );
 }
+
+*/
