@@ -19,19 +19,19 @@ export default function Dashboard() {
       <Layout>
         <Content>
           <div className="dashboard-content">
-            <h2 className="dashboard-header">WELCOME TO DASHBOARD</h2>
+            <h2 className="dashboard-header">Welcome to UC Outcomes-Based Education (UC-OBE) Portal</h2>
             
             <Row gutter={[16, 16]}>
               <Col xs={24} sm={12} md={8} lg={6}>
                 <div className="dashboard-menu-card">
                   <Card 
                     bordered={false}
+                    onClick={() => navigate('/obe-data-configuration')}
                   >
                     <img 
                       src={OBE} 
                       alt="OBE Image" 
                       className="card-image" 
-                      onClick={() => navigate('/obe-data-configuration')}
                     />
                     <div className="card-title">
                       <strong>OBE Data Configuration</strong>
@@ -60,12 +60,14 @@ export default function Dashboard() {
   
               <Col xs={24} sm={12} md={8} lg={6}>
                 <div className="dashboard-menu-card">
-                  <Card bordered={false}>
+                  <Card 
+                    bordered={false}
+                    onClick={() => navigate('/course-syllabus')}
+                  >
                     <img 
                       src={CourseSyllabus} 
                       alt="Course Syllabus" 
                       className="card-image" 
-                      onClick={() => navigate('/course-syllabus')}
                     />
                     <div className="card-title">
                       <strong>Course Syllabus</strong>
@@ -76,14 +78,17 @@ export default function Dashboard() {
   
               <Col xs={24} sm={12} md={8} lg={6}>
                 <div className="dashboard-menu-card">
-                  <Card bordered={false}>
+                  <Card 
+                  bordered={false}
+                  onClick={() => navigate('/outcomes-report')}
+                  >
                     <img 
                       src={Reports} 
                       alt="Reports Image" 
                       className="card-image" 
                     />
                     <div className="card-title">
-                      <strong>Outcomes Attainable Report</strong>
+                      <strong>Outcomes Attainment Report</strong>
                     </div>
                   </Card>
                 </div>

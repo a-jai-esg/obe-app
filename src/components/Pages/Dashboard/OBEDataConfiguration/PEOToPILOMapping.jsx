@@ -1,7 +1,16 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
-import { PlusCircleOutlined, EditOutlined, DeleteOutlined, DownOutlined } from "@ant-design/icons";
-import { Layout, Table, Select, Button, Row, Col, Spin, Modal, Form } from "antd";
+import {
+  Layout,
+  Table,
+  Select,
+  Button,
+  Row,
+  Col,
+  Spin,
+  Modal,
+  Form,
+} from "antd";
 import Sidebar from "../../../Global/Sidebar";
 import "../Curriculum/Curriculum.css";
 import "./OBEDataConfiguration.css";
@@ -16,39 +25,35 @@ export default function Curriculum() {
   const [form] = Form.useForm();
 
   const PEOData = [
-    { key: "1", program: "BSIT", objective: "Apply IT skills.", identifier: "BSIT-PEO-01" },
-    { key: "2", program: "BSIT", objective: "Pursue lifelong learning.", identifier: "BSIT-PEO-02" },
-    { key: "3", program: "BSIS", objective: "Develop information systems.", identifier: "BSIS-PEO-01" },
-    { key: "4", program: "BSIS", objective: "Lead IT-driven business transformation.", identifier: "BSIS-PEO-02" },
-    { key: "5", program: "BSSE", objective: "Design and develop software systems.", identifier: "BSSE-PEO-01" },
-    { key: "6", program: "BSSE", objective: "Solve real-world software engineering challenges.", identifier: "BSSE-PEO-02" },
+    { key: "1", program: "BSIT", courseCode: "IT101", objective: "Apply IT skills.", identifier: "BSIT-PEO-01" },
+    { key: "2", program: "BSIT", courseCode: "IT102", objective: "Pursue lifelong learning.", identifier: "BSIT-PEO-02" },
+    { key: "3", program: "BSIS", courseCode: "IS201", objective: "Develop information systems.", identifier: "BSIS-PEO-01" },
+    { key: "4", program: "BSIS", courseCode: "IS202", objective: "Lead IT-driven business transformation.", identifier: "BSIS-PEO-02" },
+    { key: "5", program: "BSSE", courseCode: "SE301", objective: "Design and develop software systems.", identifier: "BSSE-PEO-01" },
+    { key: "6", program: "BSSE", courseCode: "SE302", objective: "Solve real-world software engineering challenges.", identifier: "BSSE-PEO-02" },
   ];
 
   const [filteredPEOData, setFilteredPEOData] = useState([]);
-  
-  // State to track the values of the dropdowns
-  const [dropdownValues, setDropdownValues] = useState({});
+  const [selectedProgram, setSelectedProgram] = useState("");
+  const [selectedCourseCode, setSelectedCourseCode] = useState("");
 
   const PEOColumns = [
     {
       title: "PEO/PO",
       dataIndex: "identifier",
       key: "identifier",
-      render: (text) => <strong>{text}</strong>
+      render: (text) => <strong>{text}</strong>,
     },
-    ...['BSIT-PO-01', 'BSIT-PO-02', 'BSIT-PO-03', 'BSIT-PO-04'].map(po => ({
+    ...["PO-01", "PO-02", "PO-03", "PO-04"].map((po) => ({
       title: po,
       key: po,
       render: (_, record) => (
         <Form.Item
           name={`${record.key}-${po}`}
           initialValue=""
-          rules={[{ required: true, message: `This field is required` }]} // Validation rule
+          rules={[{ required: true, message: `This field is required` }]}
         >
-          <Select
-            style={{ width: "full" }}
-            onChange={(value) => handleDropdownChange(record.key, po, value)}
-          >
+          <Select style={{ width: "100%" }}>
             <Option value="Introduced">Introduced</Option>
             <Option value="Enhanced">Enhanced</Option>
             <Option value="Practiced">Practiced</Option>
@@ -58,39 +63,35 @@ export default function Curriculum() {
     })),
   ];
 
-  function handleDropdownChange(key, po, value) {
-    setDropdownValues((prev) => ({
-      ...prev,
-      [`${key}-${po}`]: value,
-    }));
-  }
-
-  function handleProgramFilterChange(value) {
-    if (value === "") {
-      setFilteredPEOData([]);
-    } else {
-      setFilteredPEOData(PEOData.filter(course => course.program === value));
-    }
-  }
-
   useEffect(() => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-    }, 500);
+    setTimeout(() => setLoading(false), 500);
   }, []);
 
+  const handleProgramFilterChange = (value) => {
+    setSelectedProgram(value);
+    setSelectedCourseCode(""); // Reset course code when program changes
+    const filteredData = value ? PEOData.filter((item) => item.program === value) : [];
+  };
+
+  const handleCourseCodeFilterChange = (value) => {
+    setSelectedCourseCode(value);
+    const filteredData = PEOData.filter(
+      (item) =>
+        item.program === selectedProgram &&
+        (value ? item.courseCode === value : true)
+    );
+    setFilteredPEOData(filteredData);
+  };
+
   const handleSave = () => {
-    // Validate form
     form
       .validateFields()
       .then((values) => {
-        // Logic to save the data
-        console.log("Data saved successfully:", values);
-        // You can add your save logic here, like making an API request
+        console.log("Saved Values:", values);
+        Modal.success({ title: "Success", content: "Data saved successfully." });
       })
-      .catch((errorInfo) => {
-        // Show error message if validation fails
+      .catch((err) => {
         Modal.error({
           title: "Validation Error",
           content: "Please select a value for all dropdowns.",
@@ -104,21 +105,19 @@ export default function Curriculum() {
       <Layout>
         <Content>
           <div className="dashboard-content">
-            <Row justify="space-between" align="middle" style={{ marginBottom: 20 }}>
+            <Row justify="space-between" style={{ marginBottom: 20 }}>
               <Col>
-                <h2 className="dashboard-header">MAPPING OF (POs) to PEOs</h2>
+                <h2 className="dashboard-header">Mapping of POs to PEOs</h2>
               </Col>
             </Row>
 
-            <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
-              <Col>
-                <span style={{ marginRight: 8 }}><strong>Select Program to Map: </strong></span>
-              </Col>
-              <Col xs={24} sm={12} md={8}>
+            <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <strong>Select Program:</strong>
                 <Select
-                  defaultValue=""
-                  style={{ width: '100%' }}
+                  value={selectedProgram}
                   onChange={handleProgramFilterChange}
+                  style={{ width: "100%", marginTop: 8 }}
                 >
                   <Option value="">Select Program</Option>
                   <Option value="BSIT">BSIT</Option>
@@ -126,43 +125,56 @@ export default function Curriculum() {
                   <Option value="BSSE">BSSE</Option>
                 </Select>
               </Col>
+              <Col xs={24} sm={12} md={8} lg={6}>
+                <strong>Select Course Code:</strong>
+                <Select
+                  value={selectedCourseCode}
+                  onChange={handleCourseCodeFilterChange}
+                  style={{ width: "100%", marginTop: 8 }}
+                  disabled={!selectedProgram}
+                >
+                  <Option value="">Select Course Code</Option>
+                  {PEOData.filter(
+                    (item) => item.program === selectedProgram
+                  ).map((item) => (
+                    <Option key={item.courseCode} value={item.courseCode}>
+                      {item.courseCode}
+                    </Option>
+                  ))}
+                </Select>
+              </Col>
             </Row>
 
             {loading ? (
-              <div style={{ textAlign: "center", marginTop: "100px" }}>
+              <div style={{ textAlign: "center", marginTop: 50 }}>
                 <Spin size="large" />
               </div>
+            ) : filteredPEOData.length > 0 ? (
+              <div className="table-shadow-wrapper">
+                <Form form={form} onFinish={handleSave}>
+                  <Table
+                    columns={PEOColumns}
+                    dataSource={filteredPEOData}
+                    pagination={{ pageSize: 5 }}
+                    rowKey="key"
+                  />
+                  <Row justify="end" style={{ marginTop: 20 }}>
+                    <Button
+                      style={{ marginRight: 8 }}
+                      onClick={() => navigate("/obe-data-configuration")}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="primary" htmlType="submit">
+                      Save
+                    </Button>
+                  </Row>
+                </Form>
+              </div>
             ) : (
-              filteredPEOData.length > 0 && (
-                <div className="table-shadow-wrapper">
-                  <Form
-                    name="PEOForm"
-                    onFinish={handleSave} // This triggers the save logic
-                  >
-                    <Table 
-                      columns={PEOColumns} 
-                      dataSource={filteredPEOData} 
-                      bordered 
-                      pagination={{ pageSize: 10 }} 
-                      responsive={true}
-                      rowKey="key" // Ensure rowKey is unique for each row
-                    />
-                    <Row justify="end" style={{ marginTop: 20 }}>
-                      <Col>
-                        <Button
-                        style={{marginRight:"5px"}}
-                         onClick={() => {navigate('/obe-data-configuration')}}
-                         >
-                          Cancel
-                        </Button>
-                        <Button type="primary" htmlType="submit">
-                          Save
-                        </Button>
-                      </Col>
-                    </Row>
-                  </Form>
-                </div>
-              )
+              <div style={{ textAlign: "center", marginTop: 50 }}>
+                <p>Please select a program and course code to view data.</p>
+              </div>
             )}
           </div>
         </Content>
