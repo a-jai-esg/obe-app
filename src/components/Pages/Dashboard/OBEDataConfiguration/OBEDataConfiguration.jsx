@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import {
   PlusCircleOutlined,
@@ -25,6 +24,7 @@ import Sidebar from "../../../Global/Sidebar";
 import "../Curriculum/Curriculum.css";
 import "./OBEDataConfiguration.css";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const { Content } = Layout;
 const { Option } = Select;
@@ -39,61 +39,64 @@ export default function Curriculum() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentRecord, setCurrentRecord] = useState(null);
+  const [allData, setAllData] = useState([]);
+  const [programTitles, setProgramTitles] = useState([]);
+  const [programTitleToCodeMap, setProgramTitleToCodeMap] = useState({}); // Mapping of titles to codes
   const [currentType, setCurrentType] = useState(""); // 'PEO' or 'PILO'
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [groupedData, setGroupedData] = useState([
     { id: Date.now(), value: "" },
   ]);
 
-  // Data arrays for PEO and PILO
-  // Modified data structure for PEO and PILO
-  const PEOData = [
-    {
-      key: "1",
-      program: "BSIT",
-      objectives: ["Apply IT skills.", "Pursue lifelong learning."],
-    },
-    {
-      key: "2",
-      program: "BSIS",
-      objectives: [
-        "Develop information systems.",
-        "Lead IT-driven business transformation.",
-      ],
-    },
-    {
-      key: "3",
-      program: "BSSE",
-      objectives: [
-        "Design and develop software systems.",
-        "Solve real-world software engineering challenges.",
-      ],
-    },
-  ];
+  // Fetch the programs list
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      setLoading(true);
+      try {
+        const extractedUserObject = localStorage.getItem("user");
+        const parsedObject = JSON.parse(extractedUserObject);
 
-  const PILOData = [
-    {
-      key: "1",
-      program: "BSIT",
-      outcomes: ["Effective communication.", "Problem-solving in IT."],
-    },
-    {
-      key: "2",
-      program: "BSIS",
-      outcomes: [
-        "Analyze business requirements.",
-        "Design IT solutions for business.",
-      ],
-    },
-    {
-      key: "3",
-      program: "BSSE",
-      outcomes: [
-        "Implement software development methodologies.",
-        "Work in a team to develop software.",
-      ],
-    },
-  ];
+        const response = await axios.post(
+          "http://localhost:3000/api/system/programs-master/read",
+          { dept_code: parsedObject.Department_Code },
+          { withCredentials: true }
+        );
+
+        const data = response.data;
+        setAllData(data);
+
+        // Create a mapping of program titles to program codes
+        const titleToCodeMap = data.reduce((map, program) => {
+          map[program.Program_Title] = program.Program_Code;
+          return map;
+        }, {});
+
+        setProgramTitleToCodeMap(titleToCodeMap);
+        setProgramTitles(Object.keys(titleToCodeMap)); // List of program titles
+      } catch (error) {
+        console.error("Error fetching program data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
+
+  // Data arrays for PEO and PILO based on the fetched data
+  const PEOData = allData.map((program, index) => ({
+    key: index.toString(),
+    program: program.Program_Title,
+    objectives: program.PEOs, // Assuming PEOs are part of the fetched data
+    programCode: program.Program_Code, // Program Code mapped
+  }));
+
+  const PILOData = allData.map((program, index) => ({
+    key: index.toString(),
+    program: program.Program_Title,
+    outcomes: program.PILOs, // Assuming PILOs are part of the fetched data
+    programCode: program.Program_Code, // Program Code mapped
+  }));
 
   const [filteredPEOData, setFilteredPEOData] = useState(PEOData);
   const [filteredPILOData, setFilteredPILOData] = useState(PILOData);
@@ -149,7 +152,7 @@ export default function Curriculum() {
   const PILOColumns = [
     { title: "Program", dataIndex: "program", key: "program" },
     {
-      title: "Program Intented Learning Outcomes",
+      title: "Program Intended Learning Outcomes",
       dataIndex: "outcomes",
       key: "outcomes",
       render: (outcomes) => (
@@ -194,13 +197,6 @@ export default function Curriculum() {
     },
   ];
 
-  // function handleEditClick(record, type) {
-  //   setCurrentType(type);
-  //   setIsEditMode(true);
-  //   setCurrentRecord(record);
-  //   form.setFieldsValue(record);
-  //   setIsModalVisible(true);
-  // }
   function handleEditClick(record, type) {
     setCurrentType(type);
     setIsEditMode(true);
@@ -313,301 +309,154 @@ export default function Curriculum() {
             ]);
           }
         }
-        form.resetFields();
+
         setIsModalVisible(false);
+        form.resetFields();
       })
-      .catch((info) => {
-        console.log("Validation failed:", info);
+      .catch((error) => {
+        console.log("Validation Failed:", error);
       });
   }
-
-  function handleProgramFilterChange(value) {
-    setFilteredPEOData(
-      PEOData.filter((course) => course.program === value || value === "all")
-    );
-    setFilteredPILOData(
-      PILOData.filter((course) => course.program === value || value === "all")
-    );
-  }
-
-  function handleGroupedData(value, id) {
-    const newgroupedData = groupedData.map((field) =>
-      field.id === id ? { ...field, value } : field
-    );
-    setGroupedData(newgroupedData);
-  }
-
-  function handleAdd() {
-    setGroupedData([...groupedData, { id: Date.now(), value: "" }]);
-  }
-
-  function handleRemove(id) {
-    setGroupedData(groupedData.filter((field) => field.id !== id));
-  }
-
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-    }, 500);
-  }, []);
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sidebar />
-      <Layout>
-        <Content>
-          <div className="dashboard-content">
-            <Row
-              justify="space-between"
-              align="middle"
-              style={{ marginBottom: 20 }}
-            >
-              <Col>
-                <h2 className="dashboard-header">OBE DATA CONFIGURATION</h2>
-              </Col>
-              <Col>
-                <Dropdown
-                  overlay={
-                    <Menu>
-                      <Menu.Item
-                        key="addPO"
-                        onClick={() => handleAddClick("PEO")}
-                      >
-                        Add PEO
-                      </Menu.Item>
-                      <Menu.Item
-                        key="addPILO"
-                        onClick={() => handleAddClick("PILO")}
-                      >
-                        Add PO/PILO
-                      </Menu.Item>
-                      <Menu.Item
-                        key="map"
-                        onClick={() => navigate("/peo-pilo-mapping")}
-                      >
-                        Map POs/PILOs to PEO
-                      </Menu.Item>
-                    </Menu>
-                  }
-                  trigger={["click"]}
+      <Layout className="site-layout">
+        <Content style={{ margin: "0 16px" }}>
+          <div
+            className="site-layout-background"
+            style={{ padding: 24, minHeight: 360 }}
+          >
+            <Tabs defaultActiveKey="1">
+              <TabPane tab="PEOs" key="1">
+                <Button
+                  type="primary"
+                  icon={<PlusCircleOutlined />}
+                  onClick={() => handleAddClick("PEO")}
+                  style={{ marginBottom: 16 }}
                 >
-                  <Button type="primary" icon={<PlusCircleOutlined />}>
-                    Add <DownOutlined />
-                  </Button>
-                </Dropdown>
-              </Col>
-            </Row>
-
-            <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
-              <Col>
-                <span style={{ marginRight: 8 }}>
-                  <strong>Filter by: </strong>
-                </span>
-              </Col>
-              <Col xs={24} sm={12} md={8}>
-                <Select
-                  defaultValue="all"
-                  style={{ width: "100%" }}
-                  onChange={handleProgramFilterChange}
+                  Add New PEO
+                </Button>
+                <Table
+                  loading={loading}
+                  dataSource={filteredPEOData}
+                  columns={PEOColumns}
+                  pagination={false}
+                />
+              </TabPane>
+              <TabPane tab="PILOs" key="2">
+                <Button
+                  type="primary"
+                  icon={<PlusCircleOutlined />}
+                  onClick={() => handleAddClick("PILO")}
+                  style={{ marginBottom: 16 }}
                 >
-                  <Option value="all">All Programs</Option>
-                  <Option value="BSIT">BSIT</Option>
-                  <Option value="BSIS">BSIS</Option>
-                  <Option value="BSSE">BSSE</Option>
-                </Select>
-              </Col>
-            </Row>
-
-            {loading ? (
-              <div style={{ textAlign: "center", marginTop: "100px" }}>
-                <Spin size="large" />
-              </div>
-            ) : (
-              <Tabs defaultActiveKey="PEO">
-                <TabPane tab="Program Educational Objectives" key="PEO">
-                  <div className="table-shadow-wrapper">
-                    <Table
-                      columns={PEOColumns}
-                      dataSource={filteredPEOData}
-                      bordered
-                      pagination={{ pageSize: 10 }}
-                      responsive={true}
-                    />
-                  </div>
-                </TabPane>
-                <TabPane tab="Program Outcomes" key="PILO">
-                  <div className="table-shadow-wrapper">
-                    <Table
-                      columns={PILOColumns}
-                      dataSource={filteredPILOData}
-                      bordered
-                      pagination={{ pageSize: 10 }}
-                      responsive={true}
-                    />
-                  </div>
-                </TabPane>
-              </Tabs>
-            )}
+                  Add New PILO
+                </Button>
+                <Table
+                  loading={loading}
+                  dataSource={filteredPILOData}
+                  columns={PILOColumns}
+                  pagination={false}
+                />
+              </TabPane>
+            </Tabs>
 
             <Modal
-              title={`${isEditMode ? "Edit" : "Add"} 
-                ${
-                  currentType === "PEO"
-                    ? "Program Educational Objective"
-                    : "Program Outcome/Program Intended Learning Outcome"
-                }
-             `}
+              title={isEditMode ? "Edit Record" : `Add New ${currentType}`}
               visible={isModalVisible}
               onCancel={handleModalCancel}
               onOk={handleSaveChanges}
-              okText="Save Changes"
-              width={600}
-              maskClosable={false}
+              okText={isEditMode ? "Save Changes" : "Save"}
             >
               <Form form={form} layout="vertical">
-                <Row gutter={[16, 16]}>
-                  <Col xs={24}>
-                    <Form.Item
-                      label="Program"
-                      name="program"
-                      rules={[
-                        { required: true, message: "Please select a program" },
-                      ]}
+                <Form.Item
+                  name="program"
+                  label="Program Title"
+                  rules={[
+                    { required: true, message: "Please select a program" },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select Program"
+                    onChange={(value) => handleProgramChange(value)}
+                  >
+                    {programTitles.map((title, index) => (
+                      <Option key={index} value={title}>
+                        {title}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item
+                  name="groupedData"
+                  label={`Program ${
+                    currentType === "PEO"
+                      ? "Educational Objectives"
+                      : "Intended Learning Outcomes"
+                  }`}
+                  rules={[
+                    {
+                      required: true,
+                      message: `Please provide ${currentType}`,
+                    },
+                  ]}
+                >
+                  <div>
+                    {groupedData.map((field, index) => (
+                      <Row key={field.id}>
+                        <Col span={20}>
+                          <Input
+                            value={field.value}
+                            onChange={(e) => {
+                              const updatedData = [...groupedData];
+                              updatedData[index].value = e.target.value;
+                              setGroupedData(updatedData);
+                            }}
+                            placeholder="Enter Objective/Outcome"
+                          />
+                        </Col>
+                        <Col span={4}>
+                          <Button
+                            type="danger"
+                            onClick={() => {
+                              const updatedData = groupedData.filter(
+                                (f) => f.id !== field.id
+                              );
+                              setGroupedData(updatedData);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </Col>
+                      </Row>
+                    ))}
+                    <Button
+                      type="dashed"
+                      onClick={() => {
+                        setGroupedData([
+                          ...groupedData,
+                          { id: Date.now(), value: "" },
+                        ]);
+                      }}
+                      style={{ marginTop: 16 }}
                     >
-                      <Select placeholder="Select Program">
-                        <Option value="BSIT">BSIT</Option>
-                        <Option value="BSIS">BSIS</Option>
-                        <Option value="BSSE">BSSE</Option>
-                      </Select>
-                    </Form.Item>
-                  </Col>
-                </Row>
-                {currentType !== "PILO" ? (
-                  <>
-                    <Row gutter={[16, 16]}>
-                      <Col xs={24}>
-                        <Form.Item
-                          label="Program Educational Objectives"
-                          name="objectives"
-                          rules={[
-                            {
-                              required: true,
-                              message: "Please add at least one objective",
-                            },
-                          ]}
-                        >
-                          {groupedData.map((field, index) => (
-                            <Row key={field.id} gutter={[16, 8]}>
-                              <Col xs={24} md={20}>
-                                <Input
-                                  style={{ marginBottom: "15px" }}
-                                  placeholder="Enter Objective"
-                                  value={field.value}
-                                  onChange={(e) =>
-                                    handleGroupedData(e.target.value, field.id)
-                                  }
-                                />
-                              </Col>
-                              <Col xs={24} md={4}>
-                                <Button
-                                  style={{ marginBottom: "15px" }}
-                                  type="text"
-                                  icon={<DeleteOutlined />}
-                                  danger
-                                  onClick={() => handleRemove(field.id)}
-                                />
-                              </Col>
-                            </Row>
-                          ))}
-
-                          <Row>
-                            <Col>
-                              <Button
-                                type="dashed"
-                                icon={<PlusCircleOutlined />}
-                                onClick={handleAdd}
-                                block
-                                style={{ marginTop: 10 }}
-                              >
-                                Add Outcome
-                              </Button>
-                            </Col>
-                          </Row>
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  </>
-                ) : (
-                  <>
-                    <Row gutter={[16, 16]}>
-                      <Col xs={24}>
-                        <Form.Item
-                          label="Program Intended Learning Outcomes"
-                          name="outcomes"
-                          rules={[
-                            {
-                              required: true,
-                              message: "Please add at least one outcome",
-                            },
-                          ]}
-                        >
-                          {groupedData.map((field, index) => (
-                            <Row key={field.id} gutter={[16, 8]}>
-                              <Col xs={24} md={20}>
-                                <Input
-                                  style={{ marginBottom: "15px" }}
-                                  placeholder="Enter Outcome"
-                                  value={field.value}
-                                  onChange={(e) =>
-                                    handleGroupedData(e.target.value, field.id)
-                                  }
-                                />
-                              </Col>
-                              <Col xs={24} md={4}>
-                                <Button
-                                  style={{ marginBottom: "15px" }}
-                                  type="text"
-                                  icon={<DeleteOutlined />}
-                                  danger
-                                  onClick={() => handleRemove(field.id)}
-                                />
-                              </Col>
-                            </Row>
-                          ))}
-
-                          <Row>
-                            <Col>
-                              <Button
-                                type="dashed"
-                                icon={<PlusCircleOutlined />}
-                                onClick={handleAdd}
-                                block
-                                style={{ marginTop: 10 }}
-                              >
-                                Add Outcome
-                              </Button>
-                            </Col>
-                          </Row>
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  </>
-                )}
+                      Add Another
+                    </Button>
+                  </div>
+                </Form.Item>
               </Form>
             </Modal>
 
-            {/* Delete Confirmation Modal */}
             <Modal
-              title={`Delete ${currentType === "PEO" ? "PEO" : "PO/PILO"}
-                 `}
+              title="Confirm Delete"
               visible={isDeleteModalVisible}
               onOk={handleDeleteConfirm}
               onCancel={handleDeleteCancel}
-              okButtonProps={{ danger: true }}
-              okText={"Delete"}
+              okText="Delete"
+              cancelText="Cancel"
             >
-              <p> Are you sure you want to delete?</p>
+              <p>Are you sure you want to delete this record?</p>
             </Modal>
           </div>
         </Content>

@@ -22,260 +22,69 @@ import {
 import Sidebar from "../../../Global/Sidebar";
 import axios from "axios";
 import "./Curriculum.css";
-import { useNavigate } from "react-router-dom";
 
 const { Content } = Layout;
 const { Option } = Select;
 
 export default function Curriculum() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [form] = Form.useForm();
-
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false); // Track edit mode
-
+  const [isEditMode, setIsEditMode] = useState(false);
   const [allData, setAllData] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
   const [revisionCodeData, setRevisionCodeData] = useState([]);
-
   const [programTitles, setProgramTitles] = useState([]);
-  const [selectedProgramTitle, setSelectedProgramTitle] = useState(null); // Track selected program title for filtering
+  const [selectedProgramTitle, setSelectedProgramTitle] = useState(null);
   const [selectedProgramCode, setSelectedProgramCode] = useState(null);
   const [departmentCode, setDepartmentCode] = useState(null);
   const [tableData, setTableData] = useState([]);
 
-  // Fetch program data from API
+  // fetch the programs list
   useEffect(() => {
-    setLoading(true);
-    const extractedUserObject = localStorage.getItem("user");
-    const parsedObject = JSON.parse(extractedUserObject);
-
-    const departmentCode = parsedObject.Department_Code;
-
-    axios
-      .post(
-        "http://localhost:3000/api/system/programs-master/read",
-        { Department_Code: departmentCode },
-        { withCredentials: true }
-      )
-      .then((response) => {
-        const data = response.data;
-        setAllData(data);
-        setFilteredData(data);
-        setLoading(false);
-        const titles = Array.from(
-          new Set(data.map((item) => item.Program_Title))
-        );
-
-        setProgramTitles(titles);
-      })
-      .catch((error) => {
-        console.error("Error fetching program data:", error);
-        setLoading(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    const extractedUserObject = localStorage.getItem("user");
-    const parsedObject = JSON.parse(extractedUserObject);
-
-    setDepartmentCode(parsedObject.Department_Code);
-    axios
-      .post(
-        "http://localhost:3000/api/system/programs-master/read",
-        { Department_Code: departmentCode },
-        { withCredentials: true }
-      )
-      .then((response) => {
-        const data = response.data;
-        setAllData(data);
-        setFilteredData(data);
-        setLoading(false);
-        const titles = Array.from(
-          new Set(data.map((item) => item.Program_Title))
-        );
-
-        setProgramTitles(titles);
-      })
-      .catch((error) => {
-        console.error("Error fetching program data:", error);
-        setLoading(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (selectedProgramTitle === null) {
-      setRevisionCodeData([]);
-    } else if (selectedProgramTitle) {
-      setLoading(true); // Start loading before the API call
-
-      const findProgramByTitle = (title) => {
-        return filteredData.filter(
-          (program) => program.Program_Title === title
-        );
-      };
-
-      const programCode = findProgramByTitle(selectedProgramTitle);
-      if (programCode.length > 0) {
-        setSelectedProgramCode(programCode[0].Program_Code);
-        axios
-          .post(
-            "http://localhost:3000/api/system/curriculum-master/read", // Update with the correct endpoint
-            {
-              program_code: programCode[0].Program_Code,
-              dept_code: departmentCode,
-            }, // Pass selected program code
-            { withCredentials: true }
-          )
-          .then((response) => {
-            const revisionCodes = response.data;
-            setRevisionCodeData(
-              Array.isArray(revisionCodes) ? revisionCodes : [revisionCodes]
-            );
-            setLoading(false); // Stop loading after the API call
-          })
-          .catch((error) => {
-            console.error("Error fetching revision codes:", error);
-            setLoading(false); // Stop loading if there's an error
-          });
-      }
-    }
-  }, [selectedProgramTitle, filteredData]);
-
-  useEffect(() => {
-    if (selectedProgramTitle === null) {
+    const fetchInitialData = async () => {
       setLoading(true);
-      axios
-        .post(
-          "http://localhost:3000/api/system/curriculum-courses-file-master/read", // Update with the correct endpoint
-          {
-            program_code: null,
-            dept_code: departmentCode,
-          }, // Pass null for program code to get data for all programs
+      try {
+        const extractedUserObject = localStorage.getItem("user");
+        const parsedObject = JSON.parse(extractedUserObject);
+        setDepartmentCode(parsedObject.Department_Code);
+
+        const response = await axios.post(
+          "http://localhost:3000/api/system/programs-master/read",
+          { dept_code: parsedObject.Department_Code },
           { withCredentials: true }
-        )
-        .then((response) => {
-          const data = response.data;
-
-          const filteredTableData = data.map((item) => ({
-            record_id: item.Record_ID,
-            program: item.Program_Code,
-            course_code: item.Curr_Course_Code,
-            descriptive_title: item.Curr_Course_Desc,
-            year: item.Curr_Year,
-            semester: item.Curr_Sem,
-            units: item.Curr_Units,
-            rev_code: item.Curr_Rev_Code,
-            effective_year: item.Effective_Year,
-          }));
-
-          setTableData(filteredTableData);
-          setLoading(false); // Stop loading once data is received
-        })
-        .catch((error) => {
-          console.error("Error table data:", error);
-          setLoading(false);
-        });
-    } else if (selectedProgramTitle) {
-      setLoading(true); // Start loading before the API call
-
-      const findProgramByTitle = (title) => {
-        return filteredData.filter(
-          (program) => program.Program_Title === title
         );
-      };
 
-      const programCode = findProgramByTitle(selectedProgramTitle);
-      if (programCode.length > 0) {
-        setSelectedProgramCode(programCode[0].Program_Code);
-
-        axios
-          .post(
-            "http://localhost:3000/api/system/curriculum-courses-file-master/read", // Update with the correct endpoint
-            {
-              program_code: programCode[0].Program_Code,
-              dept_code: departmentCode,
-            }, // Pass selected program title or code
-            { withCredentials: true }
-          )
-          .then((response) => {
-            const data = response.data;
-
-            // Create filteredTableData as an array
-            const filteredTableData = data.map((item) => ({
-              record_id: item.Record_ID,
-              program: item.Program_Code,
-              course_code: item.Curr_Course_Code,
-              descriptive_title: item.Curr_Course_Desc,
-              year: item.Curr_Year,
-              semester: item.Curr_Sem,
-              units: item.Curr_Units,
-              rev_code: item.Curr_Rev_Code,
-              effective_year: item.Effective_Year,
-            }));
-
-            setTableData(filteredTableData); // Set filteredTableData as an array
-            setLoading(false); // Stop loading once data is received
-          })
-          .catch((error) => {
-            console.error("Error table data:", error);
-            setLoading(false);
-          });
-      } else {
-        setLoading(false); // Stop loading if no program code is found
-      }
-    }
-  }, [selectedProgramTitle]);
-
-  // Handle program title filter change
-  function handleFilterChange(value) {
-    setSelectedProgramTitle(value);
-    if (value === "All Programs" || value === null) {
-      setSelectedProgramCode(null);
-      setFilteredData(allData); // Reset filter
-    } else {
-      const filtered = allData.filter((item) => item.Program_Title === value);
-      setSelectedProgramCode(
-        filtered.length > 0 ? filtered[0].Program_Code : null
-      );
-      setFilteredData(filtered);
-    }
-  }
-  // Open Edit Modal
-  function handleEditClick(course) {
-    setIsEditMode(true);
-    setIsEditModalVisible(true);
-    form.setFieldsValue(course);
-  }
-
-  // Open Add Modal
-  function handleAddClick() {
-    form.resetFields();
-    setIsEditMode(false);
-    setIsEditModalVisible(true);
-  }
-
-  // Close Modal and Reset the Form
-  function handleModalCancel() {
-    form.resetFields();
-    setIsEditMode(false);
-    setIsEditModalVisible(false);
-  }
-
-  // Function to get table data
-  function getTableData(programCode) {
-    setLoading(true);
-    axios
-      .post(
-        "http://localhost:3000/api/system/curriculum-courses-file-master/read",
-        { program_code: programCode, dept_code: departmentCode },
-        { withCredentials: true }
-      )
-      .then((response) => {
         const data = response.data;
+        setAllData(data);
 
+        const titles = Array.from(
+          new Set(data.map((item) => item.Program_Title))
+        );
+        setProgramTitles(titles);
+      } catch (error) {
+        console.error("Error fetching program data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    const fetchTableData = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.post(
+          "http://localhost:3000/api/system/curriculum-courses-file-master/read",
+          {
+            program_code: selectedProgramTitle ? selectedProgramCode : null,
+            dept_code: departmentCode,
+          },
+          { withCredentials: true }
+        );
+
+        const data = response.data;
         const filteredTableData = data.map((item) => ({
           record_id: item.Record_ID,
           program: item.Program_Code,
@@ -289,109 +98,133 @@ export default function Curriculum() {
         }));
 
         setTableData(filteredTableData);
-        setLoading(false);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Error fetching table data:", error);
+      } finally {
         setLoading(false);
-      });
-  }
+      }
+    };
 
-  // Handle save changes (add or update)
-  function handleSaveChanges() {
-    form
-      .validateFields()
-      .then((values) => {
-        console.log(isEditMode);
+    fetchTableData();
+  }, [selectedProgramTitle, selectedProgramCode, departmentCode]);
 
-        if (isEditMode) {
-          // Update course
-          axios
-            .put(
-              "http://localhost:3000/api/system/curriculum-courses-file-master/update",
-              {
-                program_code: selectedProgramCode,
-                curr_rev_code: values.Curr_Rev_Code,
-                curr_course_code: values.Curr_Course_Code,
-                curr_course_desc: values.Curr_Course_Desc,
-                curr_year: Number(values.Curr_Year),
-                curr_sem: Number(values.Curr_Sem),
-                curr_units: Number(values.Curr_Units),
-                curr_lec_hrs: Number(values.Curr_LEC_Hrs),
-                curr_lab_hrs: Number(values.Curr_LAB_Hrs),
-                curr_status: 1,
-                curr_crs_customfield1: null,
-                curr_crs_customfield2: null,
-                curr_crs_customfield3: null,
-              },
-              { withCredentials: true }
-            )
-            .then((response) => {
-              const updatedData = response.data;
-              setAllData(updatedData);
-              setFilteredData(updatedData);
-              setIsEditModalVisible(false);
-              form.resetFields();
-            })
-            .catch((error) => {
-              console.error("Error updating course:", error);
-            });
-        } else {
-          // Add new course
-          axios
-            .post(
-              "http://localhost:3000/api/system/curriculum-courses-file-master/create",
-              {
-                program_code: selectedProgramCode,
-                curr_rev_code: values.Curr_Rev_Code,
-                curr_course_code: values.Curr_Course_Code,
-                curr_course_desc: values.Curr_Course_Desc,
-                curr_year: Number(values.Curr_Year),
-                curr_sem: Number(values.Curr_Sem),
-                curr_units: Number(values.Curr_Units),
-                curr_lec_hrs: Number(values.Curr_LEC_Hrs),
-                curr_lab_hrs: Number(values.Curr_LAB_Hrs),
-                curr_status: 1,
-                curr_crs_customField1: null,
-                curr_crs_customField2: null,
-                curr_crs_customField3: null,
-              },
-              { withCredentials: true }
-            )
-            .then((response) => {
-              console.log(response);
-              getTableData(selectedProgramCode);
-              setIsEditModalVisible(false);
-              form.resetFields();
-            })
-            .catch((error) => {
-              console.error("Error adding course:", error);
-            });
-        }
-      })
-      .catch((info) => {
-        console.log("Validation failed:", info);
-      });
-  }
+  useEffect(() => {
+    const fetchRevisionCodes = async () => {
+      if (!selectedProgramTitle) {
+        setRevisionCodeData([]);
+        return;
+      }
 
-  // Handle delete
-  function handleDeleteClick(courseId) {
-    axios
-      .delete(
+      setLoading(true);
+      try {
+        const response = await axios.post(
+          "http://localhost:3000/api/system/curriculum-master/read",
+          {
+            program_code: selectedProgramCode,
+            dept_code: departmentCode,
+          },
+          { withCredentials: true }
+        );
+
+        const revisionCodes = response.data;
+        setRevisionCodeData(
+          Array.isArray(revisionCodes) ? revisionCodes : [revisionCodes]
+        );
+      } catch (error) {
+        console.error("Error fetching revision codes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRevisionCodes();
+  }, [selectedProgramTitle, selectedProgramCode, departmentCode]);
+
+  const handleFilterChange = (value) => {
+    setSelectedProgramTitle(value);
+    if (value === "All Programs" || value === null) {
+      setSelectedProgramCode(null);
+    } else {
+      const filtered = allData.filter((item) => item.Program_Title === value);
+      setSelectedProgramCode(
+        filtered.length > 0 ? filtered[0].Program_Code : null
+      );
+    }
+  };
+
+  const handleEditClick = (course) => {
+    setIsEditMode(true);
+    setIsEditModalVisible(true);
+    form.setFieldsValue(course);
+  };
+
+  const handleAddClick = () => {
+    form.resetFields();
+    setIsEditMode(false);
+    setIsEditModalVisible(true);
+  };
+
+  const handleModalCancel = () => {
+    form.resetFields();
+    setIsEditMode(false);
+    setIsEditModalVisible(false);
+  };
+
+  const handleSaveChanges = async () => {
+    try {
+      const values = await form.validateFields();
+
+      const payload = {
+        program_code: selectedProgramCode,
+        curr_rev_code: values.Curr_Rev_Code,
+        curr_course_code: values.Curr_Course_Code,
+        curr_course_desc: values.Curr_Course_Desc,
+        curr_year: Number(values.Curr_Year),
+        curr_sem: Number(values.Curr_Sem),
+        curr_units: Number(values.Curr_Units),
+        curr_lec_hrs: Number(values.Curr_LEC_Hrs),
+        curr_lab_hrs: Number(values.Curr_LAB_Hrs),
+        curr_status: 1,
+        curr_crs_customfield1: null,
+        curr_crs_customfield2: null,
+        curr_crs_customfield3: null,
+      };
+
+      if (isEditMode) {
+        await axios.post(
+          "http://localhost:3000/api/system/curriculum-courses-file-master/update",
+          payload,
+          { withCredentials: true }
+        );
+      } else {
+        await axios.post(
+          "http://localhost:3000/api/system/curriculum-courses-file-master/create",
+          payload,
+          { withCredentials: true }
+        );
+      }
+
+      handleModalCancel();
+      setSelectedProgramTitle(selectedProgramTitle); // Refresh the table data
+    } catch (error) {
+      console.error("Error saving changes:", error);
+    }
+  };
+
+  const handleDeleteClick = async (courseId) => {
+    try {
+      await axios.delete(
         `http://localhost:3000/api/system/curriculum-courses-file-master/delete`,
         {
+          data: { id: courseId },
           withCredentials: true,
         }
-      )
-      .then((response) => {
-        const updatedData = response.data;
-        setAllData(updatedData);
-        setFilteredData(updatedData);
-      })
-      .catch((error) => {
-        console.error("Error deleting course:", error);
-      });
-  }
+      );
+      setSelectedProgramTitle(selectedProgramTitle); // Refresh the table data
+    } catch (error) {
+      console.error("Error deleting course:", error);
+    }
+  };
 
   const columns = [
     {
@@ -456,7 +289,7 @@ export default function Curriculum() {
               <Menu.Item
                 key="delete"
                 icon={<DeleteOutlined />}
-                onClick={() => handleDeleteClick(record.id)} // Use course ID
+                onClick={() => handleDeleteClick(record.record_id)}
               >
                 Delete
               </Menu.Item>
