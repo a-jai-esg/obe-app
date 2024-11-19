@@ -285,7 +285,57 @@ export default function Curriculum() {
     setIsDeleteModalVisible(false);
   }
 
-  function handleSaveChanges(values) {
+  // function handleSaveChanges() {
+  //   const values = form.getFieldsValue();
+  //   console.log(values)
+  //   if (isEditMode) {
+  //     console.log(`Editing ${currentType}`, values);
+  //     if (currentType === "PEO") {
+  //       // Update PEO data
+  //       const updatedData = filteredPEOData.map((item) =>
+  //         item.key === currentRecord.key
+  //           ? {
+  //               ...item,
+  //               objectives: groupedData.map((field) => field.value),
+  //             }
+  //           : item
+  //       );
+  //       setFilteredPEOData(updatedData);
+  //     } else {
+  //       // Update PILO data
+  //       const updatedData = filteredPILOData.map((item) =>
+  //         item.key === currentRecord.key
+  //           ? { ...item, outcomes: groupedData.map((field) => field.value) }
+  //           : item
+  //       );
+  //       setFilteredPILOData(updatedData);
+  //     }
+  //   } else {
+  //     if (currentType === "PEO") {
+  //       // Add new PEO data
+  //       setFilteredPEOData([
+  //         ...filteredPEOData,
+  //         {
+  //           ...values,
+  //           objectives: groupedData.map((field) => field.value),
+  //         },
+  //       ]);
+  //     } else {
+  //       // Add new PILO data
+  //       setFilteredPILOData([
+  //         ...filteredPILOData,
+  //         { ...values, outcomes: groupedData.map((field) => field.value) },
+  //       ]);
+  //     }
+  //   }
+  //   form.resetFields();
+  //   setIsModalVisible(false);
+  // }
+
+  function handleSaveChanges() {
+    // Get the form values without validation
+    const values = form.getFieldsValue();
+  
     if (isEditMode) {
       console.log(`Editing ${currentType}`, values);
       if (currentType === "PEO") {
@@ -295,6 +345,7 @@ export default function Curriculum() {
             ? {
                 ...item,
                 objectives: groupedData.map((field) => field.value),
+                program: values.program, // Add the form values here
               }
             : item
         );
@@ -303,13 +354,16 @@ export default function Curriculum() {
         // Update PILO data
         const updatedData = filteredPILOData.map((item) =>
           item.key === currentRecord.key
-            ? { ...item, outcomes: groupedData.map((field) => field.value) }
+            ? { 
+                ...item, 
+                outcomes: groupedData.map((field) => field.value),
+                program: values.program, // Add the form values here
+              }
             : item
         );
         setFilteredPILOData(updatedData);
       }
     } else {
-      console.log(`Adding new ${currentType}`, values);
       if (currentType === "PEO") {
         // Add new PEO data
         setFilteredPEOData([
@@ -319,17 +373,38 @@ export default function Curriculum() {
             objectives: groupedData.map((field) => field.value),
           },
         ]);
+         //add it here
+        axios.post('/api/updatePILO', filteredPEOData)
+        .then(response => {
+          console.log('PILO data updated successfully:', response.data);
+        })
+        .catch(error => {
+          console.error('Error updating PILO data:', error);
+        });
       } else {
         // Add new PILO data
         setFilteredPILOData([
           ...filteredPILOData,
-          { ...values, outcomes: groupedData.map((field) => field.value) },
+          { 
+            ...values, 
+            outcomes: groupedData.map((field) => field.value) 
+          },
         ]);
+        //add it here
+        axios.post('/api/updatePILO', filteredPILOData)
+        .then(response => {
+          console.log('PILO data updated successfully:', response.data);
+        })
+        .catch(error => {
+          console.error('Error updating PILO data:', error);
+        });
       }
     }
-    form.resetFields();
-    setIsModalVisible(false);
+  
+    form.resetFields(); // Reset the form fields
+    setIsModalVisible(false); // Hide the modal
   }
+  
 
   function handleProgramFilterChange(value) {
     setFilteredPEOData(
@@ -470,6 +545,7 @@ export default function Curriculum() {
                     : "Program Outcome/Program Intended Learning Outcome"
                 }
              `}
+              form={form}
               visible={isModalVisible}
               onCancel={handleModalCancel}
               onOk={handleSaveChanges}
