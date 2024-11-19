@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import {
   PlusCircleOutlined,
@@ -355,6 +356,7 @@ export default function Curriculum() {
                 <Spin size="large" />
               </div>
             ) : (
+              <div className="table-shadow-wrapper">
               <Table
                 columns={columns}
                 dataSource={tableData}
@@ -362,6 +364,7 @@ export default function Curriculum() {
                 pagination={{ pageSize: 10 }}
                 responsive={true}
               />
+              </div>
             )}
           </div>
         </Content>
