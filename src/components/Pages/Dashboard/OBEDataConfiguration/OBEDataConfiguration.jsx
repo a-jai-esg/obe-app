@@ -47,11 +47,14 @@ export default function Curriculum() {
 
   const [programTitles, setProgramTitles] = useState([]);
   const [selectedFilterValue, setSelectedFilterValue] = useState("all");
-
-  // program data
   const [programData, setProgramData] = useState([]);
+  // program data
   const [filteredPEOData, setFilteredPEOData] = useState([]);
   const [filteredPILOData, setFilteredPILOData] = useState([]);
+
+  const handleProgramChange = (value) => {
+    setSelectedFilterValue(value);
+  };
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -68,13 +71,14 @@ export default function Curriculum() {
 
         // Set program data and extract program titles
         setProgramData(response.data);
+
         const titles = Array.from(
           new Set(response.data.map((item) => item.Program_Title))
         );
         setProgramTitles(titles);
 
         // Extract the program code based on the selected program title
-        const selectedProgram = response.data.find(
+        const selectedProgram = programData.find(
           (program) => program.Program_Title === selectedFilterValue
         );
 
@@ -335,76 +339,86 @@ export default function Curriculum() {
   function handleSaveChanges() {
     // Get the form values without validation
     const values = form.getFieldsValue();
-  
+    const objectivesOrOutcomes = groupedData.map((field) => field.value);
+
+    const selectedProgram = programData.find(
+      (program) => program.Program_Title === selectedFilterValue
+    );
+
+    const handlePostRequest = (url, data) => {
+      axios
+        .post(url, data, { withCredentials: true })
+        .then((response) => {
+          console.log("Data updated successfully:", response.data);
+        })
+        .catch((error) => {
+          console.error("Error updating data:", error);
+        });
+    };
+
+    const updateData = (item) => ({
+      ...item,
+      [currentType === "PEO" ? "objectives" : "outcomes"]: objectivesOrOutcomes,
+      program: values.program,
+    });
+
     if (isEditMode) {
-      console.log(`Editing ${currentType}`, values);
       if (currentType === "PEO") {
-        // Update PEO data
-        const updatedData = filteredPEOData.map((item) =>
-          item.key === currentRecord.key
-            ? {
-                ...item,
-                objectives: groupedData.map((field) => field.value),
-                program: values.program, // Add the form values here
-              }
-            : item
+        const updatedPEOData = filteredPEOData.map((item) =>
+          item.key === currentRecord.key ? updateData(item) : item
         );
-        setFilteredPEOData(updatedData);
+        setFilteredPEOData(updatedPEOData);
       } else {
-        // Update PILO data
-        const updatedData = filteredPILOData.map((item) =>
-          item.key === currentRecord.key
-            ? { 
-                ...item, 
-                outcomes: groupedData.map((field) => field.value),
-                program: values.program, // Add the form values here
-              }
-            : item
+        const updatedPILOData = filteredPILOData.map((item) =>
+          item.key === currentRecord.key ? updateData(item) : item
         );
-        setFilteredPILOData(updatedData);
+        setFilteredPILOData(updatedPILOData);
       }
     } else {
+      const newData = {
+        ...values,
+        [currentType === "PEO" ? "objectives" : "outcomes"]:
+          objectivesOrOutcomes,
+      };
+
       if (currentType === "PEO") {
-        // Add new PEO data
-        setFilteredPEOData([
-          ...filteredPEOData,
-          {
-            ...values,
-            objectives: groupedData.map((field) => field.value),
-          },
-        ]);
-         //add it here
-        axios.post('/api/updatePILO', filteredPEOData)
-        .then(response => {
-          console.log('PILO data updated successfully:', response.data);
-        })
-        .catch(error => {
-          console.error('Error updating PILO data:', error);
+        setFilteredPEOData([...filteredPEOData, newData]);
+
+        objectivesOrOutcomes.forEach((objective) => {
+          handlePostRequest(
+            "http://localhost:3000/api/system/peo-master/create",
+            {
+              program_code: selectedProgram?.Program_Code,
+              peo_desc: objective,
+              peo_status: 1,
+              peo_custom_field1: null,
+              peo_custom_field2: null,
+              peo_custom_field3: null,
+            }
+          );
         });
       } else {
-        // Add new PILO data
-        setFilteredPILOData([
-          ...filteredPILOData,
-          { 
-            ...values, 
-            outcomes: groupedData.map((field) => field.value) 
-          },
-        ]);
-        //add it here
-        axios.post('/api/updatePILO', filteredPILOData)
-        .then(response => {
-          console.log('PILO data updated successfully:', response.data);
-        })
-        .catch(error => {
-          console.error('Error updating PILO data:', error);
+        setFilteredPILOData([...filteredPILOData, newData]);
+
+        objectivesOrOutcomes.forEach((outcome) => {
+          handlePostRequest(
+            "http://localhost:3000/api/system/po-master/create",
+            {
+              program_code: selectedProgram?.Program_Code,
+              po_desc: outcome,
+              po_status: 1,
+              po_custom_field1: null,
+              po_custom_field2: null,
+              po_custom_field3: null,
+            }
+          );
         });
       }
     }
-  
+
     form.resetFields(); // Reset the form fields
     setIsModalVisible(false); // Hide the modal
   }
-  
 
   function handleProgramFilterChange(value) {
     setFilteredPEOData(
@@ -563,7 +577,10 @@ export default function Curriculum() {
                         { required: true, message: "Please select a program" },
                       ]}
                     >
-                      <Select placeholder="Select Program">
+                      <Select
+                        placeholder="Select Program"
+                        onChange={handleProgramChange}
+                      >
                         <Option value="all">All Programs</Option>
                         {programTitles.map((title) => (
                           <Option key={title} value={title}>
