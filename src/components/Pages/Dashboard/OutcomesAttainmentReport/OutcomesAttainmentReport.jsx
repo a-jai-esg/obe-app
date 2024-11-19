@@ -226,7 +226,7 @@ export default function OutcomesAttainmentReport() {
                               backgroundColor: courseColors[course],
                             }}
                           >
-                            {data[course]}
+                            {/* {data[course]} */}
                           </td>
                         ))}
                       </tr>
