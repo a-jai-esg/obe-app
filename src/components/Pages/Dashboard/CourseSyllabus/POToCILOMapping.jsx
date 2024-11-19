@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */
+import axios from "axios";
 import React, { useState, useEffect } from "react";
 import { PlusCircleOutlined, EditOutlined, DeleteOutlined, DownOutlined } from "@ant-design/icons";
 import { Layout, Table, Select, Button, Row, Col, Spin, Modal, Form } from "antd";
@@ -14,19 +15,22 @@ export default function Curriculum() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [form] = Form.useForm();
+  const [programFilter, setProgramFilter] = useState("");
+  const [courseCodeFilter, setCourseCodeFilter] = useState("");
+  const [filteredCILOData, setFilteredCILOData] = useState([]);
+  const [programs, setPrograms] = useState([]);
+  const [courseCodes, setCourseCodes] = useState([]);
 
   // Sample Data for CILO (Program Educational Objectives)
   const CILOData = [
-    { key: "1", program: "BSIT", objective: "Apply IT skills.", identifier: "BSIT-CILO-01" },
-    { key: "2", program: "BSIT", objective: "Pursue lifelong learning.", identifier: "BSIT-CILO-02" },
-    { key: "3", program: "BSIS", objective: "Develop information systems.", identifier: "BSIS-CILO-01" },
-    { key: "4", program: "BSIS", objective: "Lead IT-driven business transformation.", identifier: "BSIS-CILO-02" },
-    { key: "5", program: "BSSE", objective: "Design and develop software systems.", identifier: "BSSE-CILO-01" },
-    { key: "6", program: "BSSE", objective: "Solve real-world software engineering challenges.", identifier: "BSSE-CILO-02" },
+    { key: "1", program: "BSIT", courseCode: "CS101", objective: "Apply IT skills.", identifier: "BSIT-CILO-01",status: "" },
+    { key: "2", program: "BSIT", courseCode: "CS102", objective: "Pursue lifelong learning.", identifier: "BSIT-CILO-02", status: "Enhanced" },
+    { key: "3", program: "BSIS", courseCode: "IS101", objective: "Develop information systems.", identifier: "BSIS-CILO-01", status: "Practiced" },
+    { key: "4", program: "BSIS", courseCode: "IS102", objective: "Lead IT-driven business transformation.", identifier: "BSIS-CILO-02", status: "Introduced" },
+    { key: "5", program: "BSSE", courseCode: "SE101", objective: "Design and develop software systems.", identifier: "BSSE-CILO-01", status: "Enhanced" },
+    { key: "6", program: "BSSE", courseCode: "SE102", objective: "Solve real-world software engineering challenges.", identifier: "BSSE-CILO-02", status: "" },
   ];
 
-  const [filteredCILOData, setFilteredCILOData] = useState([]);
-  
   // State to track the values of the dropdowns
   const [dropdownValues, setDropdownValues] = useState({});
 
@@ -45,7 +49,7 @@ export default function Curriculum() {
       render: (_, record) => (
         <Form.Item
           name={`${record.key}-${po}`}
-          initialValue=""
+          initialValue={record.status || ""} 
           rules={[{ required: true, message: `This field is required` }]} // Validation rule
         >
           <Select
@@ -69,11 +73,25 @@ export default function Curriculum() {
   }
 
   function handleProgramFilterChange(value) {
-    if (value === "") {
-      setFilteredCILOData([]);
-    } else {
-      setFilteredCILOData(CILOData.filter(course => course.program === value));
-    }
+    setProgramFilter(value); // Update programFilter state
+
+    // Filter CILOData by program
+    const filteredData = value ? CILOData.filter(course => course.program === value) : CILOData;
+    // setFilteredCILOData(filteredData);
+
+    // Get unique course codes for the selected program
+    const uniqueCourseCodes = [...new Set(filteredData.map(course => course.courseCode))];
+    setCourseCodes(uniqueCourseCodes);
+  }
+
+  function handleCourseCodeFilterChange(value) {
+    setCourseCodeFilter(value);
+
+    // Filter CILOData based on program and course code
+    const filteredData = CILOData.filter(course => {
+      return (course.program === programFilter || programFilter === "") && (value ? course.courseCode === value : true);
+    });
+    setFilteredCILOData(filteredData);
   }
 
   useEffect(() => {
@@ -91,6 +109,14 @@ export default function Curriculum() {
         // Logic to save the data
         console.log("Data saved successfully:", values);
         // You can add your save logic here, like making an API request
+        axios.post('/api/updatePILO', values)
+          .then(response => {
+            console.log('PILO data updated successfully:', response.data);
+          })
+          .catch(error => {
+            console.error('Error updating PILO data:', error);
+          });
+        Modal.success({ title: "Success", content: "Data saved successfully." });
       })
       .catch((errorInfo) => {
         // Show error message if validation fails
@@ -117,7 +143,7 @@ export default function Curriculum() {
               <Col>
                 <span style={{ marginRight: 8 }}><strong>Select Program to Map: </strong></span>
               </Col>
-              <Col xs={24} sm={12} md={8}>
+              <Col xs={24} md={6}>
                 <Select
                   defaultValue=""
                   style={{ width: '100%' }}
@@ -129,7 +155,28 @@ export default function Curriculum() {
                   <Option value="BSSE">BSSE</Option>
                 </Select>
               </Col>
+              <Col>
+                <span style={{ marginRight: 8 }}><strong>Select Course Code to Filter: </strong></span>
+              </Col>
+              <Col xs={24} md={6}>
+                <Select
+                  value={courseCodeFilter}
+                  style={{ width: '100%' }}
+                  onChange={handleCourseCodeFilterChange}
+                  disabled={!programFilter} // Disable course code filter if no program is selected
+                >
+                  <Option value="">Select Course Code</Option>
+                  {courseCodes.map(code => (
+                    <Option key={code} value={code}>{code}</Option>
+                  ))}
+                </Select>
+              </Col>
             </Row>
+
+            {/* Filter by Course Code */}
+            {/* <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
+              
+            </Row> */}
 
             {loading ? (
               <div style={{ textAlign: "center", marginTop: "100px" }}>

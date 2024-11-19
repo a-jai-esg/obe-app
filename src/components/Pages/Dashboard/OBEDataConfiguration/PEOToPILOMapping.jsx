@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */
+import axios from "axios";
 import React, { useState, useEffect } from "react";
 import {
   Layout,
@@ -25,12 +26,12 @@ export default function Curriculum() {
   const [form] = Form.useForm();
 
   const PEOData = [
-    { key: "1", program: "BSIT", courseCode: "IT101", objective: "Apply IT skills.", identifier: "BSIT-PEO-01" },
-    { key: "2", program: "BSIT", courseCode: "IT102", objective: "Pursue lifelong learning.", identifier: "BSIT-PEO-02" },
-    { key: "3", program: "BSIS", courseCode: "IS201", objective: "Develop information systems.", identifier: "BSIS-PEO-01" },
-    { key: "4", program: "BSIS", courseCode: "IS202", objective: "Lead IT-driven business transformation.", identifier: "BSIS-PEO-02" },
-    { key: "5", program: "BSSE", courseCode: "SE301", objective: "Design and develop software systems.", identifier: "BSSE-PEO-01" },
-    { key: "6", program: "BSSE", courseCode: "SE302", objective: "Solve real-world software engineering challenges.", identifier: "BSSE-PEO-02" },
+    { key: "1", program: "BSIT", courseCode: "IT101", objective: "Apply IT skills.", identifier: "BSIT-PEO-01", status: "Enhanced" },
+    { key: "2", program: "BSIT", courseCode: "IT102", objective: "Pursue lifelong learning.", identifier: "BSIT-PEO-02", status: "Introduced" },
+    { key: "3", program: "BSIS", courseCode: "IS201", objective: "Develop information systems.", identifier: "BSIS-PEO-01", status: "Practiced" },
+    { key: "4", program: "BSIS", courseCode: "IS202", objective: "Lead IT-driven business transformation.", identifier: "BSIS-PEO-02", status: "Enhanced" },
+    { key: "5", program: "BSSE", courseCode: "SE301", objective: "Design and develop software systems.", identifier: "BSSE-PEO-01", status: "Introduced" },
+    { key: "6", program: "BSSE", courseCode: "SE302", objective: "Solve real-world software engineering challenges.", identifier: "BSSE-PEO-02", status: "Practiced" },
   ];
 
   const [filteredPEOData, setFilteredPEOData] = useState([]);
@@ -50,7 +51,7 @@ export default function Curriculum() {
       render: (_, record) => (
         <Form.Item
           name={`${record.key}-${po}`}
-          initialValue=""
+          initialValue={record.status || ""} // Set initial value to status (if available)
           rules={[{ required: true, message: `This field is required` }]}
         >
           <Select style={{ width: "100%" }}>
@@ -72,6 +73,7 @@ export default function Curriculum() {
     setSelectedProgram(value);
     setSelectedCourseCode(""); // Reset course code when program changes
     const filteredData = value ? PEOData.filter((item) => item.program === value) : [];
+    setFilteredPEOData(filteredData);
   };
 
   const handleCourseCodeFilterChange = (value) => {
@@ -89,6 +91,13 @@ export default function Curriculum() {
       .validateFields()
       .then((values) => {
         console.log("Saved Values:", values);
+        axios.post('/api/updatePILO', values)
+          .then(response => {
+            console.log('PILO data updated successfully:', response.data);
+          })
+          .catch(error => {
+            console.error('Error updating PILO data:', error);
+          });
         Modal.success({ title: "Success", content: "Data saved successfully." });
       })
       .catch((err) => {
@@ -125,7 +134,7 @@ export default function Curriculum() {
                   <Option value="BSSE">BSSE</Option>
                 </Select>
               </Col>
-              <Col xs={24} sm={12} md={8} lg={6}>
+              {/* <Col xs={24} sm={12} md={8} lg={6}>
                 <strong>Select Course Code:</strong>
                 <Select
                   value={selectedCourseCode}
@@ -142,7 +151,7 @@ export default function Curriculum() {
                     </Option>
                   ))}
                 </Select>
-              </Col>
+              </Col> */}
             </Row>
 
             {loading ? (
@@ -173,7 +182,7 @@ export default function Curriculum() {
               </div>
             ) : (
               <div style={{ textAlign: "center", marginTop: 50 }}>
-                <p>Please select a program and course code to view data.</p>
+                <p>Please select a program to view data.</p>
               </div>
             )}
           </div>
