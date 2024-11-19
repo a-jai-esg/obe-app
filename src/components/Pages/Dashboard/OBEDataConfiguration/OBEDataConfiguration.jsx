@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import {
   PlusCircleOutlined,
@@ -25,7 +26,6 @@ import "../Curriculum/Curriculum.css";
 import "./OBEDataConfiguration.css";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
 const { Content } = Layout;
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -40,15 +40,16 @@ export default function Curriculum() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentRecord, setCurrentRecord] = useState(null);
   const [currentType, setCurrentType] = useState(""); // 'PEO' or 'PILO'
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [groupedData, setGroupedData] = useState([
+    { id: Date.now(), value: "" },
+  ]);
+
   const [programTitles, setProgramTitles] = useState([]);
   const [selectedFilterValue, setSelectedFilterValue] = useState("all");
 
   // program data
   const [programData, setProgramData] = useState([]);
-
-  // States to store PEO and PILO data separately
-  const [PEOData, setPEOData] = useState([]);
-  const [PILOData, setPILOData] = useState([]);
   const [filteredPEOData, setFilteredPEOData] = useState([]);
   const [filteredPILOData, setFilteredPILOData] = useState([]);
 
@@ -90,7 +91,6 @@ export default function Curriculum() {
             { withCredentials: true }
           );
 
-          setPEOData(peoResponse.data);
           setFilteredPEOData(peoResponse.data); // Set initial filtered PEO data
 
           // Fetch PILO data
@@ -103,7 +103,6 @@ export default function Curriculum() {
             { withCredentials: true }
           );
 
-          setPILOData(poResponse.data);
           setFilteredPILOData(poResponse.data); // Set initial filtered PILO data
         }
       } catch (error) {
@@ -116,141 +115,19 @@ export default function Curriculum() {
     fetchInitialData();
   }, [selectedFilterValue]); // Depend on selectedFilterValue
 
-  // Filter programs based on selected filter value
-  useEffect(() => {
-    const filterData = (filterValue) => {
-      if (filterValue === "all") {
-        setFilteredPEOData(PEOData);
-        setFilteredPILOData(PILOData);
-      } else {
-        setFilteredPEOData(
-          PEOData.filter((program) => program.Program_Title === filterValue)
-        );
-        setFilteredPILOData(
-          PILOData.filter((program) => program.Program_Title === filterValue)
-        );
-      }
-    };
-    filterData(selectedFilterValue);
-  }, [selectedFilterValue, PEOData, PILOData]);
-
-  const handleSaveChanges = async () => {
-    setLoading(true);
-    const extractedUserObject = localStorage.getItem("user");
-    const parsedObject = JSON.parse(extractedUserObject);
-
-    try {
-      const programCodeFromFilter = selectedFilterValue;
-
-      let payload;
-      if (currentType === "PEO") {
-        payload = {
-          program_code: currentRecord
-            ? currentRecord.program_code
-            : programCodeFromFilter,
-          peo_desc: programData.objective, // For PEO, use objective
-          peo_status: "active",
-          peo_custom_field1: null,
-          peo_custom_field2: null,
-          peo_custom_field3: null,
-        };
-      } else if (currentType === "PILO") {
-        payload = {
-          program_code: currentRecord
-            ? currentRecord.program_code
-            : programCodeFromFilter,
-          po_desc: programData.outcome, // For PILO, use outcome
-          po_status: "active",
-          po_custom_field1: null,
-          po_custom_field2: null,
-          po_custom_field3: null,
-        };
-      }
-
-      let response;
-      if (isEditMode) {
-        if (currentType === "PEO") {
-          response = await axios.put(
-            `http://localhost:3000/api/system/peo-master/update/${currentRecord.peo_seq_number}`,
-            payload,
-            { withCredentials: true }
-          );
-        } else if (currentType === "PILO") {
-          response = await axios.put(
-            `http://localhost:3000/api/system/pilo-master/update/${currentRecord.pilo_seq_number}`,
-            payload,
-            { withCredentials: true }
-          );
-        }
-      } else {
-        if (currentType === "PEO") {
-          response = await axios.post(
-            "http://localhost:3000/api/system/peo-master/create",
-            payload,
-            { withCredentials: true }
-          );
-        } else if (currentType === "PILO") {
-          response = await axios.post(
-            "http://localhost:3000/api/system/po-master/create",
-            payload,
-            { withCredentials: true }
-          );
-        }
-      }
-
-      if (response.status === 201 || response.status === 200) {
-        setIsModalVisible(false);
-        fetchInitialData();
-      }
-    } catch (error) {
-      console.error("Error saving changes:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleModalCancel = () => {
-    setIsModalVisible(false);
-  };
-
-  const handleAddClick = (type) => {
-    setCurrentType(type);
-    setIsModalVisible(true);
-    setIsEditMode(false);
-    setProgramData({
-      objective: "", // reset objective or outcome
-      outcome: "",
-    });
-  };
-
-  const handleEditClick = (record, type) => {
-    setCurrentType(type);
-    setIsModalVisible(true);
-    setIsEditMode(true);
-    setCurrentRecord(record);
-    if (type === "PEO") {
-      setProgramData({ objective: record.objectives });
-    } else {
-      setProgramData({ outcome: record.outcomes });
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProgramData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-  };
-
   const PEOColumns = [
     { title: "Program", dataIndex: "program", key: "program" },
     {
       title: "Program Educational Objectives",
       dataIndex: "objectives",
       key: "objectives",
-      render: (objectives) =>
-        objectives ? <span>{objectives}</span> : "No Objectives Available",
+      render: (objectives) => (
+        <ul>
+          {objectives.map((objective, index) => (
+            <li key={index}>{objective}</li>
+          ))}
+        </ul>
+      ),
     },
     {
       title: "Actions",
@@ -289,11 +166,16 @@ export default function Curriculum() {
   const PILOColumns = [
     { title: "Program", dataIndex: "program", key: "program" },
     {
-      title: "Program Intended Learning Outcomes",
+      title: "Program Intented Learning Outcomes",
       dataIndex: "outcomes",
       key: "outcomes",
-      render: (outcomes) =>
-        outcomes ? <span>{outcomes}</span> : "No Outcomes Available",
+      render: (outcomes) => (
+        <ul>
+          {outcomes.map((outcome, index) => (
+            <li key={index}>{outcome}</li>
+          ))}
+        </ul>
+      ),
     },
     {
       title: "Actions",
@@ -329,76 +211,420 @@ export default function Curriculum() {
     },
   ];
 
+  // function handleEditClick(record, type) {
+  //   setCurrentType(type);
+  //   setIsEditMode(true);
+  //   setCurrentRecord(record);
+  //   form.setFieldsValue(record);
+  //   setIsModalVisible(true);
+  // }
+  function handleEditClick(record, type) {
+    setCurrentType(type);
+    setIsEditMode(true);
+    setCurrentRecord(record);
+    form.setFieldsValue(record);
+
+    if (type === "PEO") {
+      setGroupedData(
+        record.objectives.map((objective) => ({
+          id: Date.now() + Math.random(), // Unique ID for each objective
+          value: objective,
+        }))
+      );
+    } else {
+      setGroupedData(
+        record.outcomes.map((outcome) => ({
+          id: Date.now() + Math.random(), // Unique ID for each outcome
+          value: outcome,
+        }))
+      );
+    }
+    setIsModalVisible(true);
+  }
+
+  function handleAddClick(type) {
+    setCurrentType(type);
+    setIsEditMode(false);
+    form.resetFields();
+    setIsModalVisible(true);
+  }
+
+  function handleModalCancel() {
+    form.resetFields();
+    setIsModalVisible(false);
+    setIsEditMode(false);
+    setGroupedData([{ id: Date.now(), value: "" }]);
+  }
+
+  function handleDeleteClick(record) {
+    setCurrentRecord(record);
+    setIsDeleteModalVisible(true);
+  }
+
+  function handleDeleteConfirm() {
+    // Logic for deleting the record
+    console.log(`Deleted record:`, currentRecord);
+    // Remove the record from the data array based on currentType (PEO or PILO)
+    if (currentType === "PEO") {
+      setFilteredPEOData(
+        filteredPEOData.filter((item) => item.key !== currentRecord.key)
+      );
+    } else {
+      setFilteredPILOData(
+        filteredPILOData.filter((item) => item.key !== currentRecord.key)
+      );
+    }
+    setCurrentRecord(null);
+    form.resetFields();
+    setIsDeleteModalVisible(false);
+  }
+
+  function handleDeleteCancel() {
+    form.resetFields();
+    setCurrentRecord(null);
+    setIsDeleteModalVisible(false);
+  }
+
+  function handleSaveChanges(values) {
+    if (isEditMode) {
+      console.log(`Editing ${currentType}`, values);
+      if (currentType === "PEO") {
+        // Update PEO data
+        const updatedData = filteredPEOData.map((item) =>
+          item.key === currentRecord.key
+            ? {
+                ...item,
+                objectives: groupedData.map((field) => field.value),
+              }
+            : item
+        );
+        setFilteredPEOData(updatedData);
+      } else {
+        // Update PILO data
+        const updatedData = filteredPILOData.map((item) =>
+          item.key === currentRecord.key
+            ? { ...item, outcomes: groupedData.map((field) => field.value) }
+            : item
+        );
+        setFilteredPILOData(updatedData);
+      }
+    } else {
+      console.log(`Adding new ${currentType}`, values);
+      if (currentType === "PEO") {
+        // Add new PEO data
+        setFilteredPEOData([
+          ...filteredPEOData,
+          {
+            ...values,
+            objectives: groupedData.map((field) => field.value),
+          },
+        ]);
+      } else {
+        // Add new PILO data
+        setFilteredPILOData([
+          ...filteredPILOData,
+          { ...values, outcomes: groupedData.map((field) => field.value) },
+        ]);
+      }
+    }
+    form.resetFields();
+    setIsModalVisible(false);
+  }
+
+  function handleProgramFilterChange(value) {
+    setFilteredPEOData(
+      PEOData.filter((course) => course.program === value || value === "all")
+    );
+    setFilteredPILOData(
+      PILOData.filter((course) => course.program === value || value === "all")
+    );
+  }
+
+  function handleGroupedData(value, id) {
+    const newgroupedData = groupedData.map((field) =>
+      field.id === id ? { ...field, value } : field
+    );
+    setGroupedData(newgroupedData);
+  }
+
+  function handleAdd() {
+    setGroupedData([...groupedData, { id: Date.now(), value: "" }]);
+  }
+
+  function handleRemove(id) {
+    setGroupedData(groupedData.filter((field) => field.id !== id));
+  }
+
+  useEffect(() => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+    }, 500);
+  }, []);
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sidebar />
-      <Layout style={{ padding: "0 24px 24px" }}>
-        <Content
-          style={{
-            padding: 24,
-            margin: 0,
-            minHeight: 280,
-          }}
-        >
-          <Row justify="space-between">
-            <Col>
-              <h1>OBE Data Configuration</h1>
-            </Col>
-          </Row>
+      <Layout>
+        <Content>
+          <div className="dashboard-content">
+            <Row
+              justify="space-between"
+              align="middle"
+              style={{ marginBottom: 20 }}
+            >
+              <Col>
+                <h2 className="dashboard-header">OBE DATA CONFIGURATION</h2>
+              </Col>
+              <Col>
+                <Dropdown
+                  overlay={
+                    <Menu>
+                      <Menu.Item
+                        key="addPO"
+                        onClick={() => handleAddClick("PEO")}
+                      >
+                        Add PEO
+                      </Menu.Item>
+                      <Menu.Item
+                        key="addPILO"
+                        onClick={() => handleAddClick("PILO")}
+                      >
+                        Add PO/PILO
+                      </Menu.Item>
+                      <Menu.Item
+                        key="map"
+                        onClick={() => navigate("/peo-pilo-mapping")}
+                      >
+                        Map POs/PILOs to PEO
+                      </Menu.Item>
+                    </Menu>
+                  }
+                  trigger={["click"]}
+                >
+                  <Button type="primary" icon={<PlusCircleOutlined />}>
+                    Add <DownOutlined />
+                  </Button>
+                </Dropdown>
+              </Col>
+            </Row>
 
-          <Row justify="space-between" style={{ marginBottom: 16 }}>
-            <Col>
-              <Select
-                defaultValue="all"
-                style={{ width: 200 }}
-                onChange={(value) => setSelectedFilterValue(value)}
-              >
-                <Option value="all">All Programs</Option>
-                {programTitles.map((title) => (
-                  <Option key={title} value={title}>
-                    {title}
-                  </Option>
-                ))}
-              </Select>
-            </Col>
-            <Col>
-              <Button
-                icon={<PlusCircleOutlined />}
-                type="primary"
-                onClick={() => handleAddClick("PEO")}
-              >
-                Add PEO
-              </Button>
-              <Button
-                icon={<PlusCircleOutlined />}
-                type="primary"
-                onClick={() => handleAddClick("PILO")}
-              >
-                Add PILO
-              </Button>
-            </Col>
-          </Row>
+            <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
+              <Col>
+                <span style={{ marginRight: 8 }}>
+                  <strong>Filter by: </strong>
+                </span>
+              </Col>
+              <Col xs={24} sm={12} md={8}>
+                <Select
+                  defaultValue="all"
+                  style={{ width: "100%" }}
+                  onChange={handleProgramFilterChange}
+                >
+                  <Option value="all">All Programs</Option>
+                  {programTitles.map((title) => (
+                    <Option key={title} value={title}>
+                      {title}
+                    </Option>
+                  ))}
+                </Select>
+              </Col>
+            </Row>
 
-          {loading ? (
-            <Spin size="large" />
-          ) : (
-            <Tabs defaultActiveKey="1">
-              <TabPane tab="PEO" key="1">
-                <Table
-                  columns={PEOColumns}
-                  dataSource={filteredPEOData}
-                  rowKey="peo_seq_number"
-                />
-              </TabPane>
-              <TabPane tab="PILO" key="2">
-                <Table
-                  columns={PILOColumns}
-                  dataSource={filteredPILOData}
-                  rowKey="pilo_seq_number"
-                />
-              </TabPane>
-            </Tabs>
-          )}
+            {loading ? (
+              <div style={{ textAlign: "center", marginTop: "100px" }}>
+                <Spin size="large" />
+              </div>
+            ) : (
+              <Tabs defaultActiveKey="PEO">
+                <TabPane tab="Program Educational Objectives" key="PEO">
+                  <div className="table-shadow-wrapper">
+                    <Table
+                      columns={PEOColumns}
+                      dataSource={filteredPEOData}
+                      bordered
+                      pagination={{ pageSize: 10 }}
+                      responsive={true}
+                    />
+                  </div>
+                </TabPane>
+                <TabPane tab="Program Outcomes" key="PILO">
+                  <div className="table-shadow-wrapper">
+                    <Table
+                      columns={PILOColumns}
+                      dataSource={filteredPILOData}
+                      bordered
+                      pagination={{ pageSize: 10 }}
+                      responsive={true}
+                    />
+                  </div>
+                </TabPane>
+              </Tabs>
+            )}
+
+            <Modal
+              title={`${isEditMode ? "Edit" : "Add"} 
+                ${
+                  currentType === "PEO"
+                    ? "Program Educational Objective"
+                    : "Program Outcome/Program Intended Learning Outcome"
+                }
+             `}
+              visible={isModalVisible}
+              onCancel={handleModalCancel}
+              onOk={handleSaveChanges}
+              okText="Save Changes"
+              width={600}
+              maskClosable={false}
+            >
+              <Form form={form} layout="vertical">
+                <Row gutter={[16, 16]}>
+                  <Col xs={24}>
+                    <Form.Item
+                      label="Program"
+                      name="program"
+                      rules={[
+                        { required: true, message: "Please select a program" },
+                      ]}
+                    >
+                      <Select placeholder="Select Program">
+                        <Option value="all">All Programs</Option>
+                        {programTitles.map((title) => (
+                          <Option key={title} value={title}>
+                            {title}
+                          </Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+                {currentType !== "PILO" ? (
+                  <>
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24}>
+                        <Form.Item
+                          label="Program Educational Objectives"
+                          name="objectives"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Please add at least one objective",
+                            },
+                          ]}
+                        >
+                          {groupedData.map((field, index) => (
+                            <Row key={field.id} gutter={[16, 8]}>
+                              <Col xs={24} md={20}>
+                                <Input
+                                  style={{ marginBottom: "15px" }}
+                                  placeholder="Enter Objective"
+                                  value={field.value}
+                                  onChange={(e) =>
+                                    handleGroupedData(e.target.value, field.id)
+                                  }
+                                />
+                              </Col>
+                              <Col xs={24} md={4}>
+                                <Button
+                                  style={{ marginBottom: "15px" }}
+                                  type="text"
+                                  icon={<DeleteOutlined />}
+                                  danger
+                                  onClick={() => handleRemove(field.id)}
+                                />
+                              </Col>
+                            </Row>
+                          ))}
+
+                          <Row>
+                            <Col>
+                              <Button
+                                type="dashed"
+                                icon={<PlusCircleOutlined />}
+                                onClick={handleAdd}
+                                block
+                                style={{ marginTop: 10 }}
+                              >
+                                Add Outcome
+                              </Button>
+                            </Col>
+                          </Row>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </>
+                ) : (
+                  <>
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24}>
+                        <Form.Item
+                          label="Program Intended Learning Outcomes"
+                          name="outcomes"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Please add at least one outcome",
+                            },
+                          ]}
+                        >
+                          {groupedData.map((field, index) => (
+                            <Row key={field.id} gutter={[16, 8]}>
+                              <Col xs={24} md={20}>
+                                <Input
+                                  style={{ marginBottom: "15px" }}
+                                  placeholder="Enter Outcome"
+                                  value={field.value}
+                                  onChange={(e) =>
+                                    handleGroupedData(e.target.value, field.id)
+                                  }
+                                />
+                              </Col>
+                              <Col xs={24} md={4}>
+                                <Button
+                                  style={{ marginBottom: "15px" }}
+                                  type="text"
+                                  icon={<DeleteOutlined />}
+                                  danger
+                                  onClick={() => handleRemove(field.id)}
+                                />
+                              </Col>
+                            </Row>
+                          ))}
+
+                          <Row>
+                            <Col>
+                              <Button
+                                type="dashed"
+                                icon={<PlusCircleOutlined />}
+                                onClick={handleAdd}
+                                block
+                                style={{ marginTop: 10 }}
+                              >
+                                Add Outcome
+                              </Button>
+                            </Col>
+                          </Row>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </>
+                )}
+              </Form>
+            </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <Modal
+              title={`Delete ${currentType === "PEO" ? "PEO" : "PO/PILO"}
+                 `}
+              visible={isDeleteModalVisible}
+              onOk={handleDeleteConfirm}
+              onCancel={handleDeleteCancel}
+              okButtonProps={{ danger: true }}
+              okText={"Delete"}
+            >
+              <p> Are you sure you want to delete?</p>
+            </Modal>
+          </div>
         </Content>
       </Layout>
     </Layout>
