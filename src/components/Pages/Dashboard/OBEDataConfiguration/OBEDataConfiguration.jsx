@@ -47,18 +47,40 @@ export default function Curriculum() {
 
   const [programTitles, setProgramTitles] = useState([]);
   const [selectedFilterValue, setSelectedFilterValue] = useState("all");
-
-  // program data
   const [programData, setProgramData] = useState([]);
+  const [selectedProgram, setSelectedProgram] = useState(null); // Store selected program
+
+  // Program related data
   const [filteredPEOData, setFilteredPEOData] = useState([]);
   const [filteredPILOData, setFilteredPILOData] = useState([]);
+  const [programCode, setProgramCode] = useState();
+  const [deptCode, setDepartmentCode] = useState();
+
+  const handleProgramFilterChange = (value) => {
+    setSelectedFilterValue(value); // Update selected filter value
+
+    if (value === "all") {
+      // Handle "All Programs" case: Set selectedProgram to null and programCode to null
+      setSelectedProgram(null);
+      setProgramCode(null); // Clear the program code when "all" is selected
+    } else {
+      // Find the selected program from the list and set it
+      const program = programData.find(
+        (program) => program.Program_Title === value
+      );
+      setSelectedProgram(program);
+      setProgramCode(program.Program_Code); // Set the program code based on the selected program
+    }
+  };
 
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchProgramData = async () => {
       setLoading(true);
       try {
         const extractedUserObject = localStorage.getItem("user");
         const parsedObject = JSON.parse(extractedUserObject);
+
+        setDepartmentCode(parsedObject.Department_Code);
 
         const response = await axios.post(
           "http://localhost:3000/api/system/programs-master/read",
@@ -66,44 +88,22 @@ export default function Curriculum() {
           { withCredentials: true }
         );
 
-        // Set program data and extract program titles
         setProgramData(response.data);
         const titles = Array.from(
           new Set(response.data.map((item) => item.Program_Title))
         );
         setProgramTitles(titles);
 
-        // Extract the program code based on the selected program title
-        const selectedProgram = response.data.find(
-          (program) => program.Program_Title === selectedFilterValue
-        );
-
-        if (selectedProgram) {
-          const program_code = selectedProgram.Program_Code;
-
-          // Fetch PEO data
-          const peoResponse = await axios.post(
-            "http://localhost:3000/api/system/peo-master/read",
-            {
-              dept_code: parsedObject.Department_Code,
-              program_code: program_code,
-            },
-            { withCredentials: true }
+        // When the filter is "all", reset selected program to null or show all programs
+        if (selectedFilterValue === "all") {
+          setSelectedProgram(null);
+          setProgramCode(null); // Clear program code when "all" is selected
+        } else {
+          const program = response.data.find(
+            (program) => program.Program_Title === selectedFilterValue
           );
-
-          setFilteredPEOData(peoResponse.data); // Set initial filtered PEO data
-
-          // Fetch PILO data
-          const poResponse = await axios.post(
-            "http://localhost:3000/api/system/po-master/read",
-            {
-              dept_code: parsedObject.Department_Code,
-              program_code: program_code,
-            },
-            { withCredentials: true }
-          );
-
-          setFilteredPILOData(poResponse.data); // Set initial filtered PILO data
+          setSelectedProgram(program);
+          setProgramCode(program.Program_Code); // Set program code based on the selected program
         }
       } catch (error) {
         console.error("Error fetching program data:", error);
@@ -112,20 +112,92 @@ export default function Curriculum() {
       }
     };
 
-    fetchInitialData();
-  }, [selectedFilterValue]); // Depend on selectedFilterValue
+    fetchProgramData();
+  }, [selectedFilterValue]); // Depend on selectedFilterValue to change program selection
+
+  // Fetch PEO and PILO data only if programCode is set
+  useEffect(() => {
+    const fetchPeoMasterData = async () => {
+      setLoading(true);
+
+      try {
+        const response = await axios.post(
+          "http://localhost:3000/api/system/peo-master/read",
+          {
+            program_code: programCode === null ? null : programCode,
+            dept_code: deptCode,
+          },
+          { withCredentials: true }
+        );
+        setFilteredPEOData(response.data);
+      } catch (error) {
+        console.error("Error fetching PEO master data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchPoMasterData = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.post(
+          "http://localhost:3000/api/system/po-master/read",
+          { program_code: programCode === null ? null : programCode },
+          { withCredentials: true }
+        );
+        setFilteredPILOData(response.data);
+      } catch (error) {
+        console.error("Error fetching PO master data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPeoMasterData();
+    fetchPoMasterData();
+  }, [programCode]); // Fetch PEO and PILO data when programCode changes
+
+  // groupings:
+  const groupPEOsByProgram = (peoData) => {
+    return peoData.reduce((acc, peo) => {
+      if (!acc[peo.Program_Code]) {
+        acc[peo.Program_Code] = []; // Initialize an array for each program code
+      }
+      acc[peo.Program_Code].push(peo); // Add PEO to the respective program code
+      return acc;
+    }, {});
+  };
+
+  // Group the PEO data by Program Code
+  const groupedPEOData = groupPEOsByProgram(filteredPEOData);
+
+  const peoTableData = Object.keys(groupedPEOData).map((programCode) => {
+    return {
+      Program_Code: programCode,
+      objectives: groupedPEOData[programCode].map(
+        (peo) => `${peo.PEO_SeqNumber}: ${peo.PEO_Desc}`
+      ), // Prepare PEOs as a list
+    };
+  });
 
   const PEOColumns = [
-    { title: "Program", dataIndex: "program", key: "program" },
+    { title: "Program", dataIndex: "Program_Code", key: "Program_Code" },
     {
       title: "Program Educational Objectives",
       dataIndex: "objectives",
       key: "objectives",
       render: (objectives) => (
         <ul>
-          {objectives.map((objective, index) => (
-            <li key={index}>{objective}</li>
-          ))}
+          {objectives.length > 0 ? (
+            objectives.map((objective, index) => (
+              <li key={index}>
+                <strong>{objective.split(":")[0]}</strong>:{" "}
+                {objective.split(":")[1]}
+              </li>
+            ))
+          ) : (
+            <li>No objectives available</li>
+          )}
         </ul>
       ),
     },
@@ -163,17 +235,46 @@ export default function Curriculum() {
     },
   ];
 
+  const groupPOsByProgram = (poData) => {
+    return poData.reduce((acc, po) => {
+      if (!acc[po.Program_Code]) {
+        acc[po.Program_Code] = []; // Initialize an array for each program code
+      }
+      acc[po.Program_Code].push(po); // Add PO to the respective program code
+      return acc;
+    }, {});
+  };
+
+  // Group the PO data by Program Code
+  const groupedPOData = groupPOsByProgram(filteredPILOData);
+
+  const poTableData = Object.keys(groupedPOData).map((programCode) => {
+    return {
+      Program_Code: programCode,
+      outcomes: groupedPOData[programCode].map(
+        (po) => `${po.PO_SeqNumber}: ${po.PO_Desc}`
+      ), // Prepare PILOs as a list
+    };
+  });
+
   const PILOColumns = [
-    { title: "Program", dataIndex: "program", key: "program" },
+    { title: "Program", dataIndex: "Program_Code", key: "Program_Code" },
     {
-      title: "Program Intented Learning Outcomes",
+      title: "Program Intended Learning Outcomes",
       dataIndex: "outcomes",
       key: "outcomes",
       render: (outcomes) => (
         <ul>
-          {outcomes.map((outcome, index) => (
-            <li key={index}>{outcome}</li>
-          ))}
+          {outcomes.length > 0 ? (
+            outcomes.map((outcome, index) => (
+              <li key={index}>
+                <strong>{outcome.split(":")[0]}</strong>:{" "}
+                {outcome.split(":")[1]}
+              </li>
+            ))
+          ) : (
+            <li>No outcomes available</li>
+          )}
         </ul>
       ),
     },
@@ -211,13 +312,6 @@ export default function Curriculum() {
     },
   ];
 
-  // function handleEditClick(record, type) {
-  //   setCurrentType(type);
-  //   setIsEditMode(true);
-  //   setCurrentRecord(record);
-  //   form.setFieldsValue(record);
-  //   setIsModalVisible(true);
-  // }
   function handleEditClick(record, type) {
     setCurrentType(type);
     setIsEditMode(true);
@@ -285,134 +379,88 @@ export default function Curriculum() {
     setIsDeleteModalVisible(false);
   }
 
-  // function handleSaveChanges() {
-  //   const values = form.getFieldsValue();
-  //   console.log(values)
-  //   if (isEditMode) {
-  //     console.log(`Editing ${currentType}`, values);
-  //     if (currentType === "PEO") {
-  //       // Update PEO data
-  //       const updatedData = filteredPEOData.map((item) =>
-  //         item.key === currentRecord.key
-  //           ? {
-  //               ...item,
-  //               objectives: groupedData.map((field) => field.value),
-  //             }
-  //           : item
-  //       );
-  //       setFilteredPEOData(updatedData);
-  //     } else {
-  //       // Update PILO data
-  //       const updatedData = filteredPILOData.map((item) =>
-  //         item.key === currentRecord.key
-  //           ? { ...item, outcomes: groupedData.map((field) => field.value) }
-  //           : item
-  //       );
-  //       setFilteredPILOData(updatedData);
-  //     }
-  //   } else {
-  //     if (currentType === "PEO") {
-  //       // Add new PEO data
-  //       setFilteredPEOData([
-  //         ...filteredPEOData,
-  //         {
-  //           ...values,
-  //           objectives: groupedData.map((field) => field.value),
-  //         },
-  //       ]);
-  //     } else {
-  //       // Add new PILO data
-  //       setFilteredPILOData([
-  //         ...filteredPILOData,
-  //         { ...values, outcomes: groupedData.map((field) => field.value) },
-  //       ]);
-  //     }
-  //   }
-  //   form.resetFields();
-  //   setIsModalVisible(false);
-  // }
-
   function handleSaveChanges() {
     // Get the form values without validation
     const values = form.getFieldsValue();
-  
+    const objectivesOrOutcomes = groupedData.map((field) => field.value);
+
+    const selectedProgram = programData.find(
+      (program) => program.Program_Title === selectedFilterValue
+    );
+
+    const handlePostRequest = (url, data) => {
+      axios
+        .post(url, data, { withCredentials: true })
+        .then((response) => {
+          console.log("Data updated successfully:", response.data);
+        })
+        .catch((error) => {
+          console.error("Error updating data:", error);
+        });
+    };
+
+    const updateData = (item) => ({
+      ...item,
+      [currentType === "PEO" ? "objectives" : "outcomes"]: objectivesOrOutcomes,
+      program: values.program,
+    });
+
     if (isEditMode) {
-      console.log(`Editing ${currentType}`, values);
       if (currentType === "PEO") {
-        // Update PEO data
-        const updatedData = filteredPEOData.map((item) =>
-          item.key === currentRecord.key
-            ? {
-                ...item,
-                objectives: groupedData.map((field) => field.value),
-                program: values.program, // Add the form values here
-              }
-            : item
+        const updatedPEOData = filteredPEOData.map((item) =>
+          item.key === currentRecord.key ? updateData(item) : item
         );
-        setFilteredPEOData(updatedData);
+        setFilteredPEOData(updatedPEOData);
       } else {
-        // Update PILO data
-        const updatedData = filteredPILOData.map((item) =>
-          item.key === currentRecord.key
-            ? { 
-                ...item, 
-                outcomes: groupedData.map((field) => field.value),
-                program: values.program, // Add the form values here
-              }
-            : item
+        const updatedPILOData = filteredPILOData.map((item) =>
+          item.key === currentRecord.key ? updateData(item) : item
         );
-        setFilteredPILOData(updatedData);
+        setFilteredPILOData(updatedPILOData);
       }
     } else {
+      const newData = {
+        ...values,
+        [currentType === "PEO" ? "objectives" : "outcomes"]:
+          objectivesOrOutcomes,
+      };
+
       if (currentType === "PEO") {
-        // Add new PEO data
-        setFilteredPEOData([
-          ...filteredPEOData,
-          {
-            ...values,
-            objectives: groupedData.map((field) => field.value),
-          },
-        ]);
-         //add it here
-        axios.post('/api/updatePILO', filteredPEOData)
-        .then(response => {
-          console.log('PILO data updated successfully:', response.data);
-        })
-        .catch(error => {
-          console.error('Error updating PILO data:', error);
+        setFilteredPEOData([...filteredPEOData, newData]);
+
+        objectivesOrOutcomes.forEach((objective) => {
+          handlePostRequest(
+            "http://localhost:3000/api/system/peo-master/create",
+            {
+              program_code: selectedProgram?.Program_Code,
+              peo_desc: objective,
+              peo_status: 1,
+              peo_custom_field1: null,
+              peo_custom_field2: null,
+              peo_custom_field3: null,
+            }
+          );
         });
       } else {
-        // Add new PILO data
-        setFilteredPILOData([
-          ...filteredPILOData,
-          { 
-            ...values, 
-            outcomes: groupedData.map((field) => field.value) 
-          },
-        ]);
-        //add it here
-        axios.post('/api/updatePILO', filteredPILOData)
-        .then(response => {
-          console.log('PILO data updated successfully:', response.data);
-        })
-        .catch(error => {
-          console.error('Error updating PILO data:', error);
+        setFilteredPILOData([...filteredPILOData, newData]);
+
+        objectivesOrOutcomes.forEach((outcome) => {
+          handlePostRequest(
+            "http://localhost:3000/api/system/po-master/create",
+            {
+              program_code: selectedProgram?.Program_Code,
+              po_desc: outcome,
+              po_status: 1,
+              po_custom_field1: null,
+              po_custom_field2: null,
+              po_custom_field3: null,
+            }
+          );
         });
       }
     }
-  
+
     form.resetFields(); // Reset the form fields
     setIsModalVisible(false); // Hide the modal
-  }
-  
-
-  function handleProgramFilterChange(value) {
-    setFilteredPEOData(
-      PEOData.filter((course) => course.program === value || value === "all")
-    );
-    setFilteredPILOData(
-      PILOData.filter((course) => course.program === value || value === "all")
-    );
   }
 
   function handleGroupedData(value, id) {
@@ -492,7 +540,7 @@ export default function Curriculum() {
               </Col>
               <Col xs={24} sm={12} md={8}>
                 <Select
-                  defaultValue="all"
+                  value={selectedFilterValue} // Use the selectedFilterValue here
                   style={{ width: "100%" }}
                   onChange={handleProgramFilterChange}
                 >
@@ -516,7 +564,7 @@ export default function Curriculum() {
                   <div className="table-shadow-wrapper">
                     <Table
                       columns={PEOColumns}
-                      dataSource={filteredPEOData}
+                      dataSource={peoTableData}
                       bordered
                       pagination={{ pageSize: 10 }}
                       responsive={true}
@@ -527,7 +575,7 @@ export default function Curriculum() {
                   <div className="table-shadow-wrapper">
                     <Table
                       columns={PILOColumns}
-                      dataSource={filteredPILOData}
+                      dataSource={poTableData}
                       bordered
                       pagination={{ pageSize: 10 }}
                       responsive={true}
@@ -563,7 +611,10 @@ export default function Curriculum() {
                         { required: true, message: "Please select a program" },
                       ]}
                     >
-                      <Select placeholder="Select Program">
+                      <Select
+                        placeholder="Select Program"
+                        onChange={handleProgramFilterChange}
+                      >
                         <Option value="all">All Programs</Option>
                         {programTitles.map((title) => (
                           <Option key={title} value={title}>
