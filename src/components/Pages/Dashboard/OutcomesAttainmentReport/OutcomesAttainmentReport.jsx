@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Layout, Row, Col, Select, Button, Card } from "antd";
 import Sidebar from "../../../Global/Sidebar";
 import html2pdf from "html2pdf.js";
@@ -8,9 +8,12 @@ const { Content } = Layout;
 const { Option } = Select;
 
 const students = [
-  { id: 1, name: "John Doe" },
-  { id: 2, name: "Jane Smith" },
-  { id: 3, name: "Alice Johnson" },
+  { id: 1, name: "John Doe", program: "BSIT" },
+  { id: 2, name: "Jane Smith", program: "BSIS" },
+  { id: 3, name: "Alice Johnson", program: "BSIT" },
+  { id: 4, name: "Bob Brown", program: "BSSE" },
+  { id: 5, name: "Emily Davis", program: "BSIS" },
+  { id: 6, name: "Tom White", program: "BSSE" },
 ];
 
 const programs = [
@@ -22,7 +25,6 @@ const programs = [
 const programData = {
   BSIT: {
     outcomes: ["PO-01: Apply IT skills", "PO-02: Pursue lifelong learning"],
-    seoulAccordAttributes: ["Recognize the importance of IT education", "Encourage innovation and leadership in technology"],
     courses: [
       { year: "1st Year", courses: ["IT101", "IT102", "IT103"] },
       { year: "2nd Year", courses: ["IT201", "IT202", "IT203"] },
@@ -31,7 +33,6 @@ const programData = {
   },
   BSIS: {
     outcomes: ["PO-01: Develop information systems", "PO-02: Lead IT-driven transformation"],
-    seoulAccordAttributes: ["Foster collaboration and interdisciplinary learning", "Promote ethical use of information systems"],
     courses: [
       { year: "1st Year", courses: ["IS101", "IS102", "IS103"] },
       { year: "2nd Year", courses: ["IS201", "IS202", "IS203"] },
@@ -40,7 +41,6 @@ const programData = {
   },
   BSSE: {
     outcomes: ["PO-01: Design software systems", "PO-02: Solve software challenges"],
-    seoulAccordAttributes: ["Develop software engineering solutions", "Address real-world problems through software"],
     courses: [
       { year: "1st Year", courses: ["SE101", "SE102", "SE103"] },
       { year: "2nd Year", courses: ["SE201", "SE202", "SE203"] },
@@ -49,35 +49,35 @@ const programData = {
   },
 };
 
-// Color mapping for specific courses (green, red, yellow)
+// Color mapping for specific courses (green, red, #2e8b57)
 const courseColors = {
-  IT101: "red",
-  IT102: "yellow",
-  IT103: "green",
-  IT201: "yellow",
-  IT202: "green",
-  IT203: "yellow",
-  IT301: "white",
-  IT302: "white",
-  IT303: "white",
-  IS101: "green",
-  IS102: "red",
-  IS103: "green",
-  IS201: "red",
-  IS202: "yellow",
-  IS203: "red",
-  IS301: "red",
-  IS302: "yellow",
-  IS303: "red",
-  SE101: "green",
-  SE102: "green",
-  SE103: "green",
-  SE201: "red",
-  SE202: "yellow",
-  SE203: "green",
-  SE301: "red",
-  SE302: "green",
-  SE303: "red",
+  IT101: "#90ee8f",
+  IT102: "#2e8b57",
+  IT103: "#008001",
+  IT201: "#2e8b57",
+  IT202: "#008001",
+  IT203: "#2e8b57",
+  IT301: "90ee8f",
+  IT302: "90ee8f",
+  IT303: "90ee8f",
+  IS101: "#008001",
+  IS102: "#90ee8f",
+  IS103: "#008001",
+  IS201: "#90ee8f",
+  IS202: "#2e8b57",
+  IS203: "#90ee8f",
+  IS301: "#90ee8f",
+  IS302: "#2e8b57",
+  IS303: "#90ee8f",
+  SE101: "#008001",
+  SE102: "#008001",
+  SE103: "#008001",
+  SE201: "#90ee8f",
+  SE202: "#2e8b57",
+  SE203: "#008001",
+  SE301: "#90ee8f",
+  SE302: "90ee8f",
+  SE303: "#90ee8f",
 };
 
 export default function OutcomesAttainmentReport() {
@@ -85,23 +85,27 @@ export default function OutcomesAttainmentReport() {
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [tableData, setTableData] = useState([]);
 
+  const getStudentsByProgram = (programId) =>
+    students.filter((student) => student.program === programId);
+
   const handleProgramSelect = (programId) => {
     setSelectedProgram(programId);
+    setSelectedStudent(null); // Reset student selection when changing the program
+    setTableData([]); // Clear table data when changing program
 
     if (programId) {
       const data = programData[programId];
       const courses = data.courses;
       const columns = [
-        { title: "1st Year", courses: courses.find(c => c.year === "1st Year")?.courses || [] },
-        { title: "2nd Year", courses: courses.find(c => c.year === "2nd Year")?.courses || [] },
-        { title: "3rd Year", courses: courses.find(c => c.year === "3rd Year")?.courses || [] },
+        { title: "1st Year", courses: courses.find((c) => c.year === "1st Year")?.courses || [] },
+        { title: "2nd Year", courses: courses.find((c) => c.year === "2nd Year")?.courses || [] },
+        { title: "3rd Year", courses: courses.find((c) => c.year === "3rd Year")?.courses || [] },
       ];
 
       const mappedData = data.outcomes.map((outcome, index) => ({
         outcome,
-        seoulAccord: data.seoulAccordAttributes.join(", "),
         ...columns.reduce((acc, column) => {
-          column.courses.forEach(course => {
+          column.courses.forEach((course) => {
             acc[course] = `${course} grade`; // Placeholder for grades or data
           });
           return acc;
@@ -109,41 +113,14 @@ export default function OutcomesAttainmentReport() {
       }));
 
       setTableData(mappedData);
-    } else {
-      setTableData([]);
     }
   };
 
-// function generatePDF() {
-//     const printContents = document.getElementById("printablediv").innerHTML;
-//     const originalContents = document.body.innerHTML;
-    
-//     // Temporarily modify the body content for printing
-//     document.body.innerHTML = printContents;
-  
-//     // Create a new print window for the PDF generation
-//     const options = {
-//       filename: 'outcomes_attainment_report.pdf',
-//       html2canvas: { scale: 2 }, // Increase the scale for higher resolution
-//       jsPDF: { unit: 'in', format: 'legal', orientation: 'landscape' },
-//     };
-  
-//     // Use html2pdf to generate the PDF with the current content
-//     html2pdf().from(document.body).set(options).save();
-  
-//     // Revert the body content back to the original
-//     document.body.innerHTML = originalContents;
-//   }
-
-function generatePDF() {
-    // Get the content to print
+  const generatePDF = () => {
     const printContents = document.getElementById("printablediv");
+    const originalStyle = printContents.style.border;
+    printContents.style.border = "none"; // Temporarily remove the border
   
-    // Temporarily remove the border by adding a class or modifying styles
-    const originalStyle = printContents.style.border; // Save the original border style
-    printContents.style.border = "none"; // Remove the border
-  
-    // Configure `html2pdf` options
     const options = {
       margin: 10,
       filename: 'outcomes_attainment_report.pdf',
@@ -152,23 +129,19 @@ function generatePDF() {
       jsPDF: { unit: "pt", format: "legal", orientation: "landscape" },
       pagebreak: { mode: "css", before: "#pageBreak" },
     };
-
-    // Create the content with the header
+  
     const contentWithHeader = document.createElement("div");
     contentWithHeader.innerHTML = `${printContents.innerHTML}`;
   
-    // Convert the content to PDF
     html2pdf()
       .set(options)
       .from(contentWithHeader)
       .save()
       .then(() => {
-        // Restore the original border style after generating the PDF
-        printContents.style.border = originalStyle;
+        printContents.style.border = originalStyle; // Restore original border
       });
-  }
-  
-  
+  };
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sidebar />
@@ -179,27 +152,14 @@ function generatePDF() {
 
             <Row gutter={16} style={{ marginBottom: 20 }}>
               <Col xs={24} sm={12} md={8}>
-                <label><strong>Select Student:</strong></label>
-                <Select
-                  style={{ width: "100%", marginTop: 5 }}
-                  placeholder="Select a Student"
-                  onChange={(value) => setSelectedStudent(value)}
-                >
-                  {students.map((student) => (
-                    <Option key={student.id} value={student.id}>
-                      {student.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Col>
-              <Col xs={24} sm={12} md={8}>
-                <label><strong>Select Program:</strong></label>
+                <label>
+                  <strong>Select Program:</strong>
+                </label>
                 <Select
                   style={{ width: "100%", marginTop: 5 }}
                   placeholder="Select a Program"
                   value={selectedProgram}
                   onChange={handleProgramSelect}
-                  disabled={!selectedStudent}
                 >
                   {programs.map((program) => (
                     <Option key={program.id} value={program.id}>
@@ -208,22 +168,38 @@ function generatePDF() {
                   ))}
                 </Select>
               </Col>
+              <Col xs={24} sm={12} md={8}>
+                <label>
+                  <strong>Select Student:</strong>
+                </label>
+                <Select
+                  style={{ width: "100%", marginTop: 5 }}
+                  placeholder="Select a Student"
+                  value={selectedStudent}
+                  onChange={(value) => setSelectedStudent(value)}
+                  disabled={!selectedProgram}
+                >
+                  {getStudentsByProgram(selectedProgram).map((student) => (
+                    <Option key={student.id} value={student.id}>
+                      {student.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Col>
             </Row>
 
-            {tableData.length > 0 ? (
+            {(tableData.length > 0 && selectedStudent) ? (
               <div id="printablediv">
                 <Card bordered={false} style={{ marginTop: 20 }}>
                 <table  style={{ width: "100%", borderCollapse: "collapse", marginTop: 20 }}>
                   <thead>
                     <tr>
                       <th style={{ padding: "10px", textAlign: "left", border: "1px solid #ddd" }}>Program Outcomes</th>
-                      <th style={{ padding: "10px", textAlign: "left", border: "1px solid #ddd" }}>Seoul Accord Attributes</th>
                       <th colSpan={3} style={{ backgroundColor: "#f0f0f0", padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>1st Year</th>
                       <th colSpan={3} style={{ backgroundColor: "#f0f0f0", padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>2nd Year</th>
                       <th colSpan={3} style={{ backgroundColor: "#f0f0f0", padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>3rd Year</th>
                     </tr>
                     <tr>
-                      <th style={{ border: "1px solid #ddd" }}></th>
                       <th style={{ border: "1px solid #ddd" }}></th>
                       {["IT101", "IT102", "IT103"].map((course, idx) => (
                         <th key={idx} style={{ padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>{course}</th>
@@ -240,7 +216,6 @@ function generatePDF() {
                     {tableData.map((data, idx) => (
                       <tr key={idx}>
                         <td style={{ border: "1px solid #ddd", padding: "10px" }}>{data.outcome}</td>
-                        <td style={{ border: "1px solid #ddd", padding: "10px" }}>{data.seoulAccord}</td>
                         {["IT101", "IT102", "IT103", "IT201", "IT202", "IT203", "IT301", "IT302", "IT303"].map((course, idx) => (
                           <td
                             key={idx}
@@ -251,7 +226,7 @@ function generatePDF() {
                               backgroundColor: courseColors[course],
                             }}
                           >
-                            {data[course]}
+                            {/* {data[course]} */}
                           </td>
                         ))}
                       </tr>
@@ -259,51 +234,6 @@ function generatePDF() {
                   </tbody>
                 </table>
                 </Card>
-                {/* <table  style={{ width: "100%", borderCollapse: "collapse", marginTop: 20 }}>
-                  <thead>
-                    <tr>
-                      <th style={{ padding: "10px", textAlign: "left", border: "1px solid #ddd" }}>Program Outcomes</th>
-                      <th style={{ padding: "10px", textAlign: "left", border: "1px solid #ddd" }}>Seoul Accord Attributes</th>
-                      <th colSpan={3} style={{ backgroundColor: "#f0f0f0", padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>1st Year</th>
-                      <th colSpan={3} style={{ backgroundColor: "#f0f0f0", padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>2nd Year</th>
-                      <th colSpan={3} style={{ backgroundColor: "#f0f0f0", padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>3rd Year</th>
-                    </tr>
-                    <tr>
-                      <th style={{ border: "1px solid #ddd" }}></th>
-                      <th style={{ border: "1px solid #ddd" }}></th>
-                      {["IT101", "IT102", "IT103"].map((course, idx) => (
-                        <th key={idx} style={{ padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>{course}</th>
-                      ))}
-                      {["IT201", "IT202", "IT203"].map((course, idx) => (
-                        <th key={idx} style={{ padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>{course}</th>
-                      ))}
-                      {["IT301", "IT302", "IT303"].map((course, idx) => (
-                        <th key={idx} style={{ padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>{course}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tableData.map((data, idx) => (
-                      <tr key={idx}>
-                        <td style={{ border: "1px solid #ddd", padding: "10px" }}>{data.outcome}</td>
-                        <td style={{ border: "1px solid #ddd", padding: "10px" }}>{data.seoulAccord}</td>
-                        {["IT101", "IT102", "IT103", "IT201", "IT202", "IT203", "IT301", "IT302", "IT303"].map((course, idx) => (
-                          <td
-                            key={idx}
-                            style={{
-                              padding: "10px",
-                              textAlign: "center",
-                              border: "1px solid #ddd",
-                              backgroundColor: courseColors[course],
-                            }}
-                          >
-                            {data[course]}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table> */}
                     <Col xs={24} style={{ textAlign: "right", marginTop: 20 }}>
                     <Button
                     type="primary"
@@ -320,9 +250,8 @@ function generatePDF() {
                 </Col>
               </div>
             ) : (
-              <p>Please select a student and a program to view data.</p>
+              <p>Please select a program and a student to view data.</p>
             )}
-            
           </div>
         </Content>
       </Layout>
