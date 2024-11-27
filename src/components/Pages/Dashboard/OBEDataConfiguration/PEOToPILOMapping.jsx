@@ -172,47 +172,105 @@ export default function Curriculum() {
       .then((values) => {
         console.log("Saved Values:", values);
 
-        // Map form data into a format suitable for saving
-        const formattedData = Object.keys(values).map((key) => {
-          // Split the key into PEO and PO identifiers (e.g., PEO-01-PO-01)
-          const [peoIdentifier, poIdentifier] = key.split("-");
-          const [programCode, peoLabel, peoSeq] = peoIdentifier.split("-");
-          const [poLabel, poSeq] = poIdentifier.split("-PO-");
+        // Prepare an array to hold promises for API requests
+        const apiPromises = Object.keys(values).map((key) => {
+          return new Promise(async (resolve, reject) => {
+            try {
+              // Example key format: 1-BSIT-PEO-02
 
-          // Log for debugging
-          console.log("Program Code:", programCode);
-          console.log("PEO Seq:", peoSeq);
-          console.log("PO Seq:", poSeq);
-          console.log("Selected Activation Code:", values[key]);
+              // Split the key to extract the identifiers
+              const [poSeq, programCode, peoLabel, peoSeq] = key.split("-");
 
-          // Return the formatted data object
-          return {
-            Program_Code: programCode, // Extracted from PEO identifier
-            PEO_SeqNumber: peoSeq, // Extracted PEO sequence number
-            PO_SeqNumber: poSeq, // Extracted PO sequence number
-            PEO_PO_Activation_Code: values[key], // Selected value from dropdown
-            PEO_PO_Status: 1, // Assuming status as Active; adjust if needed
-            PEO_PO_CustomField1: "", // Placeholder for custom fields if required
-            PEO_PO_CustomField2: "",
-            PEO_PO_CustomField3: "",
-          };
+              // Format PO sequence number to be two digits
+              const formattedPoSeq =
+                programCode + "-PO-" + poSeq.padStart(2, "0");
+              const formattedPeoSeq = programCode + "-PEO-" + peoSeq;
+
+              console.log(formattedPeoSeq);
+              console.log(formattedPoSeq);
+
+              // Prepare the data object for the API request
+              const data = {
+                program_code: programCode,
+                peo_seq_number: formattedPeoSeq,
+                po_seq_number: formattedPoSeq,
+                peo_po_activation_code: String(values[key])
+                  .charAt(0)
+                  .toUpperCase(),
+                peo_po_status: 1, // Assuming status as Active; adjust if needed
+                peo_po_custom_field1: "", // Placeholder for custom fields if required
+                peo_po_custom_field2: "",
+                peo_po_custom_field3: "",
+              };
+
+              // Check if the mapping exists
+              const response = await axios
+                .post(
+                  "http://localhost:3000/api/system/peo-po-master/read",
+                  {
+                    program_code: programCode,
+                    peo_seq_number: formattedPeoSeq,
+                    po_seq_number: formattedPoSeq,
+                  },
+                  {
+                    withCredentials: true,
+                  }
+                )
+                .catch((err) => {
+                  axios.post(
+                    "http://localhost:3000/api/system/peo-po-master/create",
+                    data,
+                    {
+                      withCredentials: true,
+                    }
+                  );
+                });
+
+              if (response.data.exists) {
+                // If the mapping exists, update it
+                await axios.post(
+                  "http://localhost:3000/api/system/peo-po-master/update",
+                  {
+                    program_code: programCode,
+                    peo_seq_number: formattedPeoSeq,
+                    po_seq_number: formattedPoSeq,
+                    updatedFields: {
+                      peo_po_activation_code: String(values[key])
+                        .charAt(0)
+                        .toUpperCase(),
+                      peo_po_status: 1,
+                      peo_po_custom_field1: "",
+                      peo_po_custom_field2: "",
+                      peo_po_custom_field3: "",
+                    },
+                  }
+                );
+              }
+              resolve();
+            } catch (error) {
+              console.error(
+                "Error checking/updating/creating PEO-PO mapping:",
+                error
+              );
+              reject(
+                new Error("Failed to save some mappings. Please try again.")
+              );
+            }
+          });
         });
 
-        // Send the formatted data to the backend
-        axios
-          .post("/api/updatePILO", formattedData)
-          .then((response) => {
-            console.log("PILO data updated successfully:", response.data);
+        // Wait for all API requests to complete
+        Promise.all(apiPromises)
+          .then(() => {
             Modal.success({
               title: "Success",
               content: "Data saved successfully.",
             });
           })
           .catch((error) => {
-            console.error("Error updating PILO data:", error);
             Modal.error({
               title: "Error",
-              content: "There was an error saving the data.",
+              content: error.message,
             });
           });
       })
@@ -223,6 +281,7 @@ export default function Curriculum() {
         });
       });
   };
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sidebar />
