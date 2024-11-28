@@ -20,10 +20,14 @@ export default function Curriculum() {
   const [filteredCILOData, setFilteredCILOData] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [courseCodes, setCourseCodes] = useState([]);
+  const [departmentCode, setDepartmentCode] = useState("");
+  const [programData, setProgramData] = useState([]);
+  const [courseData, setCourseData] = useState([]);
+  const [programTitles, setProgramTitles] = useState([]);
 
   // Sample Data for CILO (Program Educational Objectives)
   const CILOData = [
-    { key: "1", program: "BSIT", courseCode: "CS101", objective: "Apply IT skills.", identifier: "BSIT-CILO-01",status: "" },
+    { key: "1", program: "BSIT", courseCode: "CS101", objective: "Apply IT skills.", identifier: "BSIT-CILO-01", status: "" },
     { key: "2", program: "BSIT", courseCode: "CS102", objective: "Pursue lifelong learning.", identifier: "BSIT-CILO-02", status: "Enhanced" },
     { key: "3", program: "BSIS", courseCode: "IS101", objective: "Develop information systems.", identifier: "BSIS-CILO-01", status: "Practiced" },
     { key: "4", program: "BSIS", courseCode: "IS102", objective: "Lead IT-driven business transformation.", identifier: "BSIS-CILO-02", status: "Introduced" },
@@ -36,24 +40,17 @@ export default function Curriculum() {
 
   // Define PO columns
   const CILOColumns = [
-    {
-      title: "PO/CILOS",
-      dataIndex: "identifier",
-      key: "identifier",
-      render: (text) => <strong>{text}</strong>,
-    },
-    // Mapping POs dynamically for each program
+    { title: "PO/CILOS", dataIndex: "identifier", key: "identifier", render: (text) => <strong>{text}</strong> },
     ...['BSIT-PO-01', 'BSIT-PO-02', 'BSIT-PO-03', 'BSIT-PO-04'].map(po => ({
       title: po,
       key: po,
       render: (_, record) => (
         <Form.Item
           name={`${record.key}-${po}`}
-          initialValue={record.status || ""} 
-          rules={[{ required: true, message: `This field is required` }]} // Validation rule
+          initialValue={record.status || ""}
         >
           <Select
-            style={{ width: "full" }}
+            style={{ width: "100%" }}
             onChange={(value) => handleDropdownChange(record.key, po, value)}
           >
             <Option value="Introduced">Introduced</Option>
@@ -65,6 +62,67 @@ export default function Curriculum() {
     })),
   ];
 
+  const fetchProgramCodes = async () => {
+    setLoading(true);
+    try {
+      const extractedUserObject = localStorage.getItem("user");
+      const parsedObject = JSON.parse(extractedUserObject);
+      setDepartmentCode(parsedObject.Department_Code);
+
+      const response = await axios.post(
+        "http://localhost:3000/api/system/programs-master/read",
+        { dept_code: parsedObject.Department_Code },
+        { withCredentials: true }
+      );
+
+      const data = response?.data;
+      setProgramData(data);
+
+      const titles = Array.from(
+        new Set(data.map((item) => item.Program_Title))
+      );
+      setProgramTitles(titles);
+
+    } catch (error) {
+      console.error("Error fetching program data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCourseCodes = async (programCode) => {
+    setLoading(true);
+    try {
+      const extractedUserObject = localStorage.getItem("user");
+      const parsedObject = JSON.parse(extractedUserObject);
+      setDepartmentCode(parsedObject.Department_Code);
+
+      const response = await axios.post(
+        "http://localhost:3000/api/system/curriculum-courses-file-master/read",
+        { dept_code: parsedObject.Department_Code, program_code: programCode },
+        { withCredentials: true }
+      );
+
+      const data = response?.data;
+      setCourseData(data);
+
+      // Map the correct field for course codes
+      const codes = Array.from(
+        new Set(data.map((item) => item.Curr_Course_Code))
+      );
+      setCourseCodes(codes);
+
+    } catch (error) {
+      console.error("Error fetching course code data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProgramCodes();
+  }, []);
+
   function handleDropdownChange(key, po, value) {
     setDropdownValues((prev) => ({
       ...prev,
@@ -73,15 +131,19 @@ export default function Curriculum() {
   }
 
   function handleProgramFilterChange(value) {
-    setProgramFilter(value); // Update programFilter state
+    setProgramFilter(value);
 
     // Filter CILOData by program
     const filteredData = value ? CILOData.filter(course => course.program === value) : CILOData;
-    // setFilteredCILOData(filteredData);
+    setFilteredCILOData(filteredData);
 
-    // Get unique course codes for the selected program
-    const uniqueCourseCodes = [...new Set(filteredData.map(course => course.courseCode))];
-    setCourseCodes(uniqueCourseCodes);
+    // Fetch Course Codes for the selected program
+    const selectedProgram = programData.find((program) => program.Program_Title === value);
+    if (selectedProgram) {
+      fetchCourseCodes(selectedProgram.Program_Code);
+    } else {
+      setCourseCodes([]); // Clear course codes if no program is selected
+    }
   }
 
   function handleCourseCodeFilterChange(value) {
@@ -91,24 +153,14 @@ export default function Curriculum() {
     const filteredData = CILOData.filter(course => {
       return (course.program === programFilter || programFilter === "") && (value ? course.courseCode === value : true);
     });
+
     setFilteredCILOData(filteredData);
   }
 
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-    }, 500);
-  }, []);
-
   const handleSave = () => {
-    // Validate form
-    form
-      .validateFields()
+    form.validateFields()
       .then((values) => {
-        // Logic to save the data
         console.log("Data saved successfully:", values);
-        // You can add your save logic here, like making an API request
         axios.post('/api/updatePILO', values)
           .then(response => {
             console.log('PILO data updated successfully:', response.data);
@@ -119,7 +171,6 @@ export default function Curriculum() {
         Modal.success({ title: "Success", content: "Data saved successfully." });
       })
       .catch((errorInfo) => {
-        // Show error message if validation fails
         Modal.error({
           title: "Validation Error",
           content: "Please select a value for all dropdowns.",
@@ -138,27 +189,29 @@ export default function Curriculum() {
                 <h2 className="dashboard-header">MAPPING OF (POs) to CILOs</h2>
               </Col>
             </Row>
-
             <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
               <Col>
                 <span style={{ marginRight: 8 }}><strong>Select Program to Map: </strong></span>
               </Col>
-              <Col xs={24} md={6}>
+              <Col xs={24} lg={10}>
                 <Select
                   defaultValue=""
                   style={{ width: '100%' }}
                   onChange={handleProgramFilterChange}
                 >
-                  <Option value="">Select Program</Option>
-                  <Option value="BSIT">BSIT</Option>
-                  <Option value="BSIS">BSIS</Option>
-                  <Option value="BSSE">BSSE</Option>
+                  {programTitles.map((title) => (
+                    <Option key={title} value={title}>
+                      {title}
+                    </Option>
+                  ))}
                 </Select>
               </Col>
+            </Row>
+            <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
               <Col>
                 <span style={{ marginRight: 8 }}><strong>Select Course Code to Filter: </strong></span>
               </Col>
-              <Col xs={24} md={6}>
+              <Col xs={24} lg={6}>
                 <Select
                   value={courseCodeFilter}
                   style={{ width: '100%' }}
@@ -172,12 +225,6 @@ export default function Curriculum() {
                 </Select>
               </Col>
             </Row>
-
-            {/* Filter by Course Code */}
-            {/* <Row gutter={16} style={{ marginBottom: 20 }} align="middle">
-              
-            </Row> */}
-
             {loading ? (
               <div style={{ textAlign: "center", marginTop: "100px" }}>
                 <Spin size="large" />
@@ -186,16 +233,17 @@ export default function Curriculum() {
               filteredCILOData.length > 0 && (
                 <div className="table-shadow-wrapper">
                   <Form
+                    form={form}
                     name="CILOForm"
-                    onFinish={handleSave} // This triggers the save logic
+                    onFinish={handleSave}
                   >
-                    <Table 
-                      columns={CILOColumns} 
-                      dataSource={filteredCILOData} 
-                      bordered 
-                      pagination={{ pageSize: 10 }} 
-                      responsive={true}
-                      rowKey="key" // Ensure rowKey is unique for each row
+                    <Table
+                      columns={CILOColumns}
+                      dataSource={filteredCILOData}
+                      bordered
+                      pagination={{ pageSize: 10 }}
+                      responsive
+                      rowKey="key"
                     />
                     <Row justify="end" style={{ marginTop: 20 }}>
                       <Col>
