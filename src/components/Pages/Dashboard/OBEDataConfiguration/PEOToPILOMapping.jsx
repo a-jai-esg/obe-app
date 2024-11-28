@@ -137,10 +137,12 @@ export default function Curriculum() {
                   name={`${record.key}-${identifier}`}
                   initialValue={record.status || ""} // Set initial value to status (if available)
                   rules={[
-                    { required: true, message: `This field is required` },
+                    // { required: true, message: `This field is required` },
+                    { required: false },
                   ]}
                 >
                   <Select style={{ width: "100%" }}>
+                    <Option value="None">None</Option>
                     <Option value="Introduced">Introduced</Option>
                     <Option value="Enhanced">Enhanced</Option>
                     <Option value="Practiced">Practiced</Option>
@@ -189,14 +191,25 @@ export default function Curriculum() {
               console.log(formattedPeoSeq);
               console.log(formattedPoSeq);
 
+              // Determine the peo_po_activation_code value
+              let peo_po_activation_code = String(values[key]).trim();
+              if (
+                peo_po_activation_code === "" ||
+                peo_po_activation_code === "N"
+              ) {
+                peo_po_activation_code = null;
+              } else {
+                peo_po_activation_code = peo_po_activation_code
+                  .charAt(0)
+                  .toUpperCase();
+              }
+
               // Prepare the data object for the API request
               const data = {
                 program_code: programCode,
                 peo_seq_number: formattedPeoSeq,
                 po_seq_number: formattedPoSeq,
-                peo_po_activation_code: String(values[key])
-                  .charAt(0)
-                  .toUpperCase(),
+                peo_po_activation_code: peo_po_activation_code,
                 peo_po_status: 1, // Assuming status as Active; adjust if needed
                 peo_po_custom_field1: "", // Placeholder for custom fields if required
                 peo_po_custom_field2: "",
@@ -204,48 +217,49 @@ export default function Curriculum() {
               };
 
               // Check if the mapping exists
-              const response = await axios
+              const response = await axios.post(
+                "http://localhost:3000/api/system/peo-po-master/read",
+                {
+                  program_code: programCode,
+                  peo_seq_number: formattedPeoSeq,
+                  po_seq_number: formattedPoSeq,
+                },
+                {
+                  withCredentials: true,
+                }
+              );
+
+              console.log(response);
+              await axios
                 .post(
-                  "http://localhost:3000/api/system/peo-po-master/read",
-                  {
-                    program_code: programCode,
-                    peo_seq_number: formattedPeoSeq,
-                    po_seq_number: formattedPoSeq,
-                  },
+                  "http://localhost:3000/api/system/peo-po-master/create",
+                  data,
                   {
                     withCredentials: true,
                   }
                 )
-                .catch((err) => {
+                .catch(() => {
+                  console.log("activation code: " + String(values[key]).trim());
                   axios.post(
-                    "http://localhost:3000/api/system/peo-po-master/create",
-                    data,
+                    "http://localhost:3000/api/system/peo-po-master/update",
+                    {
+                      program_code: programCode,
+                      peo_seq_number: formattedPeoSeq,
+                      po_seq_number: formattedPoSeq,
+                      updatedFields: {
+                        peo_po_activation_code: peo_po_activation_code,
+                        peo_po_status: 1,
+                        peo_po_custom_field1: "",
+                        peo_po_custom_field2: "",
+                        peo_po_custom_field3: "",
+                      },
+                    },
                     {
                       withCredentials: true,
                     }
                   );
                 });
 
-              if (response.data.exists) {
-                // If the mapping exists, update it
-                await axios.post(
-                  "http://localhost:3000/api/system/peo-po-master/update",
-                  {
-                    program_code: programCode,
-                    peo_seq_number: formattedPeoSeq,
-                    po_seq_number: formattedPoSeq,
-                    updatedFields: {
-                      peo_po_activation_code: String(values[key])
-                        .charAt(0)
-                        .toUpperCase(),
-                      peo_po_status: 1,
-                      peo_po_custom_field1: "",
-                      peo_po_custom_field2: "",
-                      peo_po_custom_field3: "",
-                    },
-                  }
-                );
-              }
               resolve();
             } catch (error) {
               console.error(
