@@ -245,9 +245,9 @@ export default function OutcomesAttainmentReport() {
                 </Select> 
               </Col>
             </Row>
-
+          
             { 
-              subjects &&
+              subjects && selectedStudent ? (
               <div id="printablediv">
                 <Card bordered={false} style={{ marginTop: 20 }}>
                 <table  style={{ width: "100%", borderCollapse: "collapse", marginTop: 20 }}>
@@ -339,7 +339,9 @@ export default function OutcomesAttainmentReport() {
                     </Button>
                 </Col>
               </div>
+              ) : (<p>Please select a program and a student to view data.</p>)
             }
+
           </div>
         </Content>
       </Layout>
