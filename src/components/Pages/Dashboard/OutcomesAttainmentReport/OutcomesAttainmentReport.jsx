@@ -1,26 +1,41 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Fragment } from "react";
 import { Layout, Row, Col, Select, Button, Card } from "antd";
 import Sidebar from "../../../Global/Sidebar";
 import html2pdf from "html2pdf.js";
+import axios from "axios";
 
+
+
+
+//const [students, setStudents] = useState(""); 
 const { Content } = Layout;
 const { Option } = Select;
 
-const students = [
+const handlePostRequest = (url, data) => {
+
+    return axios.post(url, data, { withCredentials: true })
+    .catch(error => {
+        const err_message = error.message 
+        console.error("Error updating data:", error);
+    });  
+};
+
+
+/*const students = [
   { id: 1, name: "John Doe", program: "BSIT" },
   { id: 2, name: "Jane Smith", program: "BSIS" },
   { id: 3, name: "Alice Johnson", program: "BSIT" },
   { id: 4, name: "Bob Brown", program: "BSSE" },
   { id: 5, name: "Emily Davis", program: "BSIS" },
   { id: 6, name: "Tom White", program: "BSSE" },
-];
+];*/
 
-const programs = [
+/*const programs = [
   { id: "BSIT", name: "BS Information Technology" },
   { id: "BSIS", name: "BS Information Systems" },
   { id: "BSSE", name: "BS Software Engineering" },
-];
+];*/
 
 const programData = {
   BSIT: {
@@ -50,71 +65,82 @@ const programData = {
 };
 
 // Color mapping for specific courses (green, red, #2e8b57)
-const courseColors = {
-  IT101: "#90ee8f",
-  IT102: "#2e8b57",
-  IT103: "#008001",
-  IT201: "#2e8b57",
-  IT202: "#008001",
-  IT203: "#2e8b57",
-  IT301: "90ee8f",
-  IT302: "90ee8f",
-  IT303: "90ee8f",
-  IS101: "#008001",
-  IS102: "#90ee8f",
-  IS103: "#008001",
-  IS201: "#90ee8f",
-  IS202: "#2e8b57",
-  IS203: "#90ee8f",
-  IS301: "#90ee8f",
-  IS302: "#2e8b57",
-  IS303: "#90ee8f",
-  SE101: "#008001",
-  SE102: "#008001",
-  SE103: "#008001",
-  SE201: "#90ee8f",
-  SE202: "#2e8b57",
-  SE203: "#008001",
-  SE301: "#90ee8f",
-  SE302: "90ee8f",
-  SE303: "#90ee8f",
-};
+const gradeColors = ["#FF6666","#FFCCCC","#339900","#336600", "#FFFFCC"];
 
 export default function OutcomesAttainmentReport() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedProgram, setSelectedProgram] = useState(null);
+  const [selectedTerm, setSelectedTerm] = useState(null);
   const [tableData, setTableData] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [programs, setPrograms] = useState([]);
+  const [terms, setTerms] = useState([]);
+  const [grades, setGrades] = useState([]);
+  const [programOutcomes, setProgramOutcomes] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [cilo_mapping, setCILOMapping] = useState([]);
+  const [outcomeCount, setoutcomeCount] = useState(0);
 
-  const getStudentsByProgram = (programId) =>
-    students.filter((student) => student.program === programId);
+  const handleTermSelect = (term) => {
+    setSelectedTerm(term);
+    setSelectedStudent(null); // Reset student selection when changing the program
+    handlePostRequest("http://localhost:3000/api/system/students-data/read",{coursecode: selectedProgram, term: term}).then(response => {
+      setStudents(response.data);
+    });
+    
+  };
 
+  const handleSelectStudent = (value) => {
+    setSelectedStudent(value);
+    handlePostRequest("http://localhost:3000/api/system/students-data/outcomes",{idnumber: value, coursecode: selectedProgram}).then(response => {
+      setProgramOutcomes(response.data.outcomes);
+      setSubjects(response.data.subjects);
+      setGrades(response.data.grades);
+      setCILOMapping(response.data.cilo_map);
+
+    });
+
+    // handlePostRequest("http://localhost:3000/api/system/students-data/outcomes/subjects",{}).then(response => {
+    //   setProgramOutcomes(response.data);
+    // });
+  }
+    
   const handleProgramSelect = (programId) => {
     setSelectedProgram(programId);
     setSelectedStudent(null); // Reset student selection when changing the program
     setTableData([]); // Clear table data when changing program
-
-    if (programId) {
-      const data = programData[programId];
-      const courses = data.courses;
-      const columns = [
-        { title: "1st Year", courses: courses.find((c) => c.year === "1st Year")?.courses || [] },
-        { title: "2nd Year", courses: courses.find((c) => c.year === "2nd Year")?.courses || [] },
-        { title: "3rd Year", courses: courses.find((c) => c.year === "3rd Year")?.courses || [] },
-      ];
-
-      const mappedData = data.outcomes.map((outcome, index) => ({
-        outcome,
-        ...columns.reduce((acc, column) => {
-          column.courses.forEach((course) => {
-            acc[course] = `${course} grade`; // Placeholder for grades or data
-          });
-          return acc;
-        }, {}),
-      }));
-
-      setTableData(mappedData);
-    }
+    handlePostRequest("http://localhost:3000/api/system/students-data/terms",{coursecode: programId}).then(response => {
+      setTerms(response.data);
+    });
+    
   };
+
+  useEffect(() => {
+    if (programs.length === 0) {
+      handlePostRequest("http://localhost:3000/api/system/students-data/programs",{}).then(response => {
+        setPrograms(response.data);
+      });
+    }
+   
+  });
+
+  const convertTermToReadable = (term, compact, educLevel=null) => {
+      let sem = "";
+      let toReturn = "";
+      if(term.charAt(4) === "1") sem = compact ? "1st Sem" : "1st Semester";
+      if(term.charAt(4) === "2") sem = compact ? "2nd Sem" : "2nd Semester";
+      if(term.charAt(4) === "4") sem = "Summer";
+
+      const schyearTo = term.substring(0, 4);
+      const schyearFrom = parseInt(schyearTo, 10) - 1;
+      toReturn = sem + " S.Y. " +  schyearFrom + " - " + schyearTo;
+      if(compact) toReturn = sem + " SY " +  schyearFrom + "-" + schyearTo;
+      if(educLevel && ["JHS","BED"].includes(educLevel) && !toReturn.includes("Summer")) {        
+          if(compact) toReturn = toReturn.substring(toReturn.length - 12);
+          else toReturn = toReturn.substring(toReturn.length - 16);
+      }
+      return toReturn;
+  }
 
   const generatePDF = () => {
     const printContents = document.getElementById("printablediv");
@@ -148,6 +174,20 @@ export default function OutcomesAttainmentReport() {
       <Layout>
         <Content style={{ padding: "20px" }}>
           <div className="dashboard-content">
+            <Row gutter={16} style={{ marginBottom: 20 }}>
+                <Col>
+                <table  style={{ width: "100%", background: 'white', borderCollapse: "collapse", marginTop: 20 }}> 
+                  <tr>
+                    <th style={{ padding: "10px", textAlign: "left", border: "1px solid #ddd" }}>Legend:</th>
+                    <td style={{ padding: "10px", textAlign: "left", border: "1px solid #ddd", backgroundColor: gradeColors[3] }}>High Attainment</td>
+                    <td style={{ padding: "10px", textAlign: "left", border: "1px solid #ddd", backgroundColor: gradeColors[2] }}>Moderate Attainment</td>
+                    <td style={{ padding: "10px", textAlign: "left", border: "1px solid #ddd", backgroundColor: gradeColors[1] }}>Low Attainment</td>
+                    <td style={{ padding: "10px", textAlign: "left", border: "1px solid #ddd", backgroundColor: gradeColors[0] }}>Not Yet Attained</td>
+                    <td style={{ padding: "10px", textAlign: "left", border: "1px solid #ddd", backgroundColor: gradeColors[4] }}>No Data/ Subject not yet taken</td>
+                  </tr>
+                </table>
+                </Col>
+            </Row>
             <h2 className="dashboard-header">OUTCOMES ATTAINMENT REPORT</h2>
 
             <Row gutter={16} style={{ marginBottom: 20 }}>
@@ -162,33 +202,52 @@ export default function OutcomesAttainmentReport() {
                   onChange={handleProgramSelect}
                 >
                   {programs.map((program) => (
-                    <Option key={program.id} value={program.id}>
-                      {program.name}
+                    <Option key={program.COURSECODE} value={program.COURSECODE}>
+                      {program.Program_Title}
                     </Option>
                   ))}
                 </Select>
               </Col>
               <Col xs={24} sm={12} md={8}>
                 <label>
+                  <strong>Select Batch/Term:</strong>
+                </label>
+                 <Select
+                  style={{ width: "100%", marginTop: 5 }}
+                  placeholder="Select a Term"
+                  value={selectedTerm}
+                  onChange={(value) => handleTermSelect(value)}
+                  disabled={!selectedProgram}
+                >
+                  {terms.map((te) => (
+                    <Option key={te.term} value={te.term}>
+                      {convertTermToReadable(te.term)}
+                    </Option>
+                  ))}
+                </Select> 
+              </Col>
+              <Col xs={24} sm={12} md={8}>
+                <label>
                   <strong>Select Student:</strong>
                 </label>
-                <Select
+                 <Select
                   style={{ width: "100%", marginTop: 5 }}
                   placeholder="Select a Student"
                   value={selectedStudent}
-                  onChange={(value) => setSelectedStudent(value)}
-                  disabled={!selectedProgram}
+                  onChange={(value) => handleSelectStudent(value)}
+                  disabled={!terms}
                 >
-                  {getStudentsByProgram(selectedProgram).map((student) => (
-                    <Option key={student.id} value={student.id}>
-                      {student.name}
+                  {students.filter(x => x.COURSECODE === selectedProgram).map((student) => (
+                    <Option key={student.IDNUMBER} value={student.IDNUMBER}>
+                      {student.LASTNAME}, {student.FIRSTNAME} {student.MIDNAME}
                     </Option>
                   ))}
-                </Select>
+                </Select> 
               </Col>
             </Row>
 
-            {(tableData.length > 0 && selectedStudent) ? (
+            { 
+              subjects &&
               <div id="printablediv">
                 <Card bordered={false} style={{ marginTop: 20 }}>
                 <table  style={{ width: "100%", borderCollapse: "collapse", marginTop: 20 }}>
@@ -201,36 +260,67 @@ export default function OutcomesAttainmentReport() {
                     </tr>
                     <tr>
                       <th style={{ border: "1px solid #ddd" }}></th>
-                      {["IT101", "IT102", "IT103"].map((course, idx) => (
-                        <th key={idx} style={{ padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>{course}</th>
-                      ))}
-                      {["IT201", "IT202", "IT203"].map((course, idx) => (
-                        <th key={idx} style={{ padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>{course}</th>
-                      ))}
-                      {["IT301", "IT302", "IT303"].map((course, idx) => (
-                        <th key={idx} style={{ padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>{course}</th>
-                      ))}
+                      {
+                        subjects.length !== 0 &&
+                        subjects.map((subject, index) => {
+                          var splittedSub = subject.subject_code.split('-');
+                          return(
+                            <th key={index} style={{ padding: "10px", textAlign: "center", border: "1px solid #ddd" }}>{splittedSub[splittedSub.length-1]}</th>
+                          )
+                        })
+                      }
                     </tr>
                   </thead>
                   <tbody>
-                    {tableData.map((data, idx) => (
-                      <tr key={idx}>
-                        <td style={{ border: "1px solid #ddd", padding: "10px" }}>{data.outcome}</td>
-                        {["IT101", "IT102", "IT103", "IT201", "IT202", "IT203", "IT301", "IT302", "IT303"].map((course, idx) => (
-                          <td
-                            key={idx}
-                            style={{
-                              padding: "10px",
-                              textAlign: "center",
-                              border: "1px solid #ddd",
-                              backgroundColor: courseColors[course],
-                            }}
-                          >
-                            {/* {data[course]} */}
-                          </td>
-                        ))}
+                    {
+                      programOutcomes.map((data, idx) => {
+                        
+                        return (
+                          <tr key={idx}>
+                        <td style={{ border: "1px solid #ddd", padding: "10px" }}>{data.description}</td>
+                        {
+                          subjects.map((subject, index) => {
+                            var filteredGrade = grades.filter(x => x.internal_code === subject.internal_code);
+                            var gradeColor = 0;
+                            var gradeLevel = filteredGrade.length === 0 ? 99 : parseInt(filteredGrade[0].FINAL);
+                            var isPO = false;
+
+                            if(filteredGrade.length !== 0){
+                              var cilo = cilo_mapping.filter(x => x.internal_code === filteredGrade[0].internal_code)[0];
+                              var splittedSequence = cilo.sequence.split(',');
+                              var ciloCheck = (parseInt(idx)+1).toString();
+                              if(splittedSequence.includes(ciloCheck)){
+                                isPO = true;
+                              }
+
+                            }
+                            
+                            if (gradeLevel >= 10 && gradeLevel <= 17 ) gradeColor = 3;
+                            else if (gradeLevel >= 18 && gradeLevel <= 23 ) gradeColor = 2;
+                            else if (gradeLevel >= 24 && gradeLevel <= 30 ) gradeColor = 1;
+                            else if (gradeLevel !== 99 && gradeLevel > 30) gradeColor = 0;
+                            else if (gradeLevel === 99) gradeColor = 4;
+                            return (
+                              <td
+                                key={idx}
+                                style={{
+                                  padding: "10px",
+                                  textAlign: "center",
+                                  border: "1px solid #ddd",
+                                  backgroundColor: isPO ? gradeColors[gradeColor] : "",
+                                }}
+                              >
+                                {/* {filteredGrade[0]?.FINAL} - {gradeColor} */}
+                              </td>
+                            );
+                          })
+                        }
+                        
                       </tr>
-                    ))}
+                        )
+                      })
+                    
+                    }
                   </tbody>
                 </table>
                 </Card>
@@ -249,9 +339,7 @@ export default function OutcomesAttainmentReport() {
                     </Button>
                 </Col>
               </div>
-            ) : (
-              <p>Please select a program and a student to view data.</p>
-            )}
+            }
           </div>
         </Content>
       </Layout>

@@ -317,8 +317,9 @@ export default function Curriculum() {
     setIsEditMode(true);
     setCurrentRecord(record);
     form.setFieldsValue(record);
-
     if (type === "PEO") {
+      console.log("PEO", record);
+      return;
       setGroupedData(
         record.objectives.map((objective) => ({
           id: Date.now() + Math.random(), // Unique ID for each objective
@@ -326,6 +327,8 @@ export default function Curriculum() {
         }))
       );
     } else {
+      console.log("non-PEO", record);
+      return;
       setGroupedData(
         record.outcomes.map((outcome) => ({
           id: Date.now() + Math.random(), // Unique ID for each outcome
