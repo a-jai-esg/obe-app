@@ -22,6 +22,7 @@ import {
   Input,
   InputNumber,
 } from "antd";
+import axios from "axios";
 import Sidebar from "../../../Global/Sidebar";
 import "../Curriculum/Curriculum.css";
 import { useNavigate } from "react-router-dom";
@@ -41,6 +42,16 @@ export default function CourseSyllabus() {
   const [cloFields, setCloFields] = useState([{ id: Date.now(), value: "" }]); // State for CLOs
   const [selectedCourse, setSelectedCourse] = useState(null); // Store selected course data
 
+  const [programTitles, setProgramTitles] = useState([]);
+  const [selectedFilterValue, setSelectedFilterValue] = useState("all");
+  const [programData, setProgramData] = useState([]);
+  const [selectedProgram, setSelectedProgram] = useState(null); // Store selected program
+
+  // Program related data
+  const [filteredPEOData, setFilteredPEOData] = useState([]);
+  const [filteredPILOData, setFilteredPILOData] = useState([]);
+  const [programCode, setProgramCode] = useState();
+  const [deptCode, setDepartmentCode] = useState();
   // Open Edit Modal
   function handleEditClick(course) {
     form.setFieldsValue(course); // Set form fields with selected course data
@@ -70,24 +81,87 @@ export default function CourseSyllabus() {
   }
 
   function handleSaveChanges() {
-    form
-      .validateFields()
-      .then((values) => {
-        if (isEditMode) {
-          // Handle update logic for the course
-          console.log("Editing course", values);
-          form.resetFields(); // Reset the form fields after saving
-        } else {
-          // Handle add logic for the new course
-          console.log("Adding new course", values);
-          form.resetFields(); // Reset the form fields after adding
-        }
-        setIsEditModalVisible(false); // Close the modal after saving
-        setCloFields([{ id: Date.now(), value: "" }]); // Reset CLO fields
-      })
-      .catch((info) => {
-        console.log("Validation failed:", info);
-      });
+    // Get the form values without validation
+    const values = form.getFieldsValue();
+    const objectivesOrOutcomes = groupedData.map((field) => field.value);
+
+    const selectedProgram = programData.find(
+      (program) => program.Program_Title === selectedFilterValue
+    );
+
+    const handlePostRequest = (url, data) => {
+      axios
+        .post(url, data, { withCredentials: true })
+        .then((response) => {
+          console.log("Data updated successfully:", response.data);
+        })
+        .catch((error) => {
+          console.error("Error updating data:", error);
+        });
+    };
+
+    const updateData = (item) => ({
+      ...item,
+      [currentType === "PEO" ? "objectives" : "outcomes"]: objectivesOrOutcomes,
+      program: values.program,
+    });
+
+    if (isEditMode) {
+      if (currentType === "PEO") {
+        const updatedPEOData = filteredPEOData.map((item) =>
+          item.key === currentRecord.key ? updateData(item) : item
+        );
+        setFilteredPEOData(updatedPEOData);
+      } else {
+        const updatedPILOData = filteredPILOData.map((item) =>
+          item.key === currentRecord.key ? updateData(item) : item
+        );
+        setFilteredPILOData(updatedPILOData);
+      }
+    } else {
+      const newData = {
+        ...values,
+        [currentType === "PEO" ? "objectives" : "outcomes"]:
+          objectivesOrOutcomes,
+      };
+
+      if (currentType === "PEO") {
+        setFilteredPEOData([...filteredPEOData, newData]);
+
+        objectivesOrOutcomes.forEach((objective) => {
+          handlePostRequest(
+            "http://localhost:3000/api/system/peo-master/create",
+            {
+              program_code: selectedProgram?.Program_Code,
+              peo_desc: objective,
+              peo_status: 1,
+              peo_custom_field1: null,
+              peo_custom_field2: null,
+              peo_custom_field3: null,
+            }
+          );
+        });
+      } else {
+        setFilteredPILOData([...filteredPILOData, newData]);
+
+        objectivesOrOutcomes.forEach((outcome) => {
+          handlePostRequest(
+            "http://localhost:3000/api/system/po-master/create",
+            {
+              program_code: selectedProgram?.Program_Code,
+              po_desc: outcome,
+              po_status: 1,
+              po_custom_field1: null,
+              po_custom_field2: null,
+              po_custom_field3: null,
+            }
+          );
+        });
+      }
+    }
+
+    form.resetFields(); // Reset the form fields
+    setIsModalVisible(false); // Hide the modal
   }
 
   // Handle Delete Confirmation
@@ -241,12 +315,64 @@ export default function CourseSyllabus() {
   // State for filtered data based on program and year
   const [filteredData, setFilteredData] = useState(allData);
 
-  // Handle filter change for program
-  function handleProgramFilterChange(value) {
-    setFilteredData(
-      allData.filter((course) => course.program === value || value === "all")
-    );
-  }
+  const handleProgramFilterChange = (value) => {
+    setSelectedFilterValue(value); // Update selected filter value
+
+    if (value === "all") {
+      // Handle "All Programs" case: Set selectedProgram to null and programCode to null
+      setSelectedProgram(null);
+      setProgramCode(null); // Clear the program code when "all" is selected
+    } else {
+      // Find the selected program from the list and set it
+      const program = programData.find(
+        (program) => program.Program_Title === value
+      );
+      setSelectedProgram(program);
+      setProgramCode(program.Program_Code); // Set the program code based on the selected program
+    }
+  };
+
+  useEffect(() => {
+    const fetchProgramData = async () => {
+      setLoading(true);
+      try {
+        const extractedUserObject = localStorage.getItem("user");
+        const parsedObject = JSON.parse(extractedUserObject);
+
+        setDepartmentCode(parsedObject.Department_Code);
+
+        const response = await axios.post(
+          "http://localhost:3000/api/system/programs-master/read",
+          { dept_code: parsedObject.Department_Code },
+          { withCredentials: true }
+        );
+
+        setProgramData(response.data);
+        const titles = Array.from(
+          new Set(response.data.map((item) => item.Program_Title))
+        );
+        setProgramTitles(titles);
+
+        // When the filter is "all", reset selected program to null or show all programs
+        if (selectedFilterValue === "all") {
+          setSelectedProgram(null);
+          setProgramCode(null); // Clear program code when "all" is selected
+        } else {
+          const program = response.data.find(
+            (program) => program.Program_Title === selectedFilterValue
+          );
+          setSelectedProgram(program);
+          setProgramCode(program.Program_Code); // Set program code based on the selected program
+        }
+      } catch (error) {
+        console.error("Error fetching program data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProgramData();
+  }, [selectedFilterValue]); // Depend on selectedFilterValue to change program selection
 
   // Handle filter change for year
   function handleYearFilterChange(value) {
@@ -330,14 +456,16 @@ export default function CourseSyllabus() {
               </Col>
               <Col xs={24} sm={12} md={8}>
                 <Select
-                  defaultValue="all"
+                  value={selectedFilterValue} // Use the selectedFilterValue here
                   style={{ width: "100%" }}
                   onChange={handleProgramFilterChange}
                 >
                   <Option value="all">All Programs</Option>
-                  <Option value="BSIT">BSIT</Option>
-                  <Option value="BSIS">BSIS</Option>
-                  <Option value="BSSE">BSSE</Option>
+                  {programTitles.map((title) => (
+                    <Option key={title} value={title}>
+                      {title}
+                    </Option>
+                  ))}
                 </Select>
               </Col>
             </Row>
@@ -384,10 +512,16 @@ export default function CourseSyllabus() {
                         { required: true, message: "Please select a program" },
                       ]}
                     >
-                      <Select placeholder="Select Program">
-                        <Option value="BSIT">BSIT</Option>
-                        <Option value="BSIS">BSIS</Option>
-                        <Option value="BSSE">BSSE</Option>
+                      <Select
+                        value={selectedFilterValue} // Use the selectedFilterValue here
+                        style={{ width: "100%" }}
+                        onChange={handleProgramFilterChange}
+                      >
+                        {programTitles.map((title) => (
+                          <Option key={title} value={title}>
+                            {title}
+                          </Option>
+                        ))}
                       </Select>
                     </Form.Item>
                   </Col>
